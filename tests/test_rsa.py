@@ -1,11 +1,24 @@
-import pytest
+import math
 
-from rsa.core import decrypt_int, decrypt_text, encrypt_int, encrypt_text
+import pytest
+from hypothesis import assume, given, settings
+from hypothesis import strategies as st
+
+from rsa.core import (
+    _block_size,
+    decrypt_bytes,
+    decrypt_int,
+    decrypt_text,
+    encrypt_bytes,
+    encrypt_int,
+    encrypt_text,
+)
 from rsa.keygen import extended_gcd, generate_keypair, mod_inverse
 from rsa.primes import generate_prime, is_prime
 
 KNOWN_PRIMES = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 97, 7919]
 KNOWN_COMPOSITES = [1, 4, 6, 8, 9, 15, 21, 100, 561, 1729]  # 561, 1729 are Carmichael numbers
+SMALL_PRIMES_FOR_PROPERTY = [17, 97, 251, 65537, 104729]
 
 
 def test_is_prime_known_primes():
@@ -95,3 +108,79 @@ def test_textbook_rsa_is_deterministic_same_block_same_ciphertext():
     c1 = encrypt_text("AAAAAAAAAAAAAAAA", kp.public)
     c2 = encrypt_text("AAAAAAAAAAAAAAAA", kp.public)
     assert c1 == c2  # demonstrates the textbook-RSA weakness noted in rsa/core.py
+
+
+# --- Edge cases around block boundaries and encoding ---------------------------------
+
+
+@pytest.fixture(scope="module")
+def keypair():
+    return generate_keypair(256)
+
+
+def test_encrypt_decrypt_empty_message(keypair):
+    ciphertext = encrypt_bytes(b"", keypair.public)
+    assert decrypt_bytes(ciphertext, keypair.private) == b""
+
+
+def test_encrypt_decrypt_message_exactly_one_block(keypair):
+    block_size = _block_size(keypair.public.n)
+    message = b"\x42" * block_size
+    ciphertext = encrypt_bytes(message, keypair.public)
+    assert decrypt_bytes(ciphertext, keypair.private) == message
+
+
+def test_encrypt_decrypt_message_exactly_multiple_blocks(keypair):
+    block_size = _block_size(keypair.public.n)
+    message = (b"x" * block_size) * 3  # exactly 3 full blocks before padding
+    ciphertext = encrypt_bytes(message, keypair.public)
+    # a message that's already block-aligned still gets a full block of padding (PKCS7 rule)
+    assert len(ciphertext) == 4
+    assert decrypt_bytes(ciphertext, keypair.private) == message
+
+
+def test_encrypt_decrypt_message_ending_in_byte_that_looks_like_padding(keypair):
+    # PKCS7 unpadding trusts the last byte; make sure real data ending in e.g. 0x01
+    # doesn't get misinterpreted before the padding we appended.
+    message = b"end of message is one byte: \x01"
+    ciphertext = encrypt_bytes(message, keypair.public)
+    assert decrypt_bytes(ciphertext, keypair.private) == message
+
+
+def test_encrypt_decrypt_text_round_trip_multibyte_unicode(keypair):
+    plaintext = "Attack at dawn — 攻撃は夜明けに 🔐"
+    ciphertext = encrypt_text(plaintext, keypair.public)
+    assert decrypt_text(ciphertext, keypair.private) == plaintext
+
+
+def test_every_ciphertext_block_is_within_modulus_range(keypair):
+    ciphertext = encrypt_text("some reasonably long test message here", keypair.public)
+    for block in ciphertext:
+        assert 0 <= block < keypair.public.n
+
+
+# --- Property-based tests (hypothesis) -------------------------------------------------
+
+
+@settings(max_examples=200, deadline=None)
+@given(a=st.integers(min_value=0, max_value=10**9), b=st.integers(min_value=1, max_value=10**9))
+def test_extended_gcd_property(a, b):
+    g, x, y = extended_gcd(a, b)
+    assert g == math.gcd(a, b)
+    assert a * x + b * y == g
+
+
+@settings(max_examples=100, deadline=None)
+@given(m=st.sampled_from(SMALL_PRIMES_FOR_PROPERTY), a=st.integers(min_value=1, max_value=10**9))
+def test_mod_inverse_property(m, a):
+    assume(a % m != 0)
+    inv = mod_inverse(a, m)
+    assert 0 <= inv < m
+    assert (a * inv) % m == 1
+
+
+@settings(max_examples=25, deadline=None)
+@given(data=st.binary(min_size=0, max_size=300))
+def test_encrypt_decrypt_bytes_round_trip_property(keypair, data):
+    ciphertext = encrypt_bytes(data, keypair.public)
+    assert decrypt_bytes(ciphertext, keypair.private) == data

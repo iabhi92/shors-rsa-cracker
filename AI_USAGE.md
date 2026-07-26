@@ -20,3 +20,29 @@ Format per entry: date, what was built/decided, what AI contributed vs. what was
 - **Human contribution**: Overall project brief, mentor's approval and reading list (Aaronson blog, Quirk,
   Google Cirq Shor's tutorial, algassert.com posts), quality bar set by mentor's feedback on prior toy demos.
 - **Chat link / screenshot**: _(add link to this Claude Code session or screenshot here)_
+
+## 2026-07-26 — RSA core + classical attacker suite
+
+- **What**: Implemented RSA fully from scratch (`rsa/primes.py` Miller-Rabin, `rsa/keygen.py`
+  extended-Euclid keygen, `rsa/core.py` PKCS7-padded block encrypt/decrypt with an explicit
+  docstring on why textbook RSA is insecure). Added 25 tests including hypothesis
+  property-based tests for `extended_gcd`/`mod_inverse`/round-trip encryption, plus edge
+  cases (empty message, block-boundary message, multibyte unicode, padding-lookalike bytes).
+  Then implemented four classical factoring attacks from scratch (`attacker/classical.py`:
+  trial division, Fermat's method, Pollard's rho, Pollard's p-1), each paired with tests that
+  construct composites specifically designed to exercise that method's strength/weakness
+  (close primes for Fermat, smooth p-1 for Pollard's p-1). Built `scripts/benchmark_classical.py`,
+  which generates real RSA keypairs at increasing bit sizes and times real attacks against
+  them, producing `data/classical_benchmark.{csv,png}` — measured evidence (not just
+  assertion) that trial division blows up exponentially while Pollard's rho fares better
+  but still can't touch real key sizes.
+- **AI contribution**: Claude Code wrote all of the above, including deciding which
+  classical algorithms were worth implementing (declined quadratic sieve / GNFS as
+  disproportionate for the demo's scope) and designing the benchmark's bit-size range to
+  stay within a few minutes of runtime while still being unambiguously exponential.
+- **Human contribution**: Explicit steering — deferred the website build to a later stage
+  and asked for the core (RSA/attacker/quantum) to be "rock solid," not something that
+  looks skimmed in a couple of hours. That's what drove the property-based tests, the
+  multi-method attacker (not just one factoring algorithm), and the measured-not-asserted
+  benchmark plot.
+- **Chat link / screenshot**: _(add link to this Claude Code session or screenshot here)_
