@@ -18,7 +18,7 @@ Pipeline per attempt:
 import math
 from dataclasses import dataclass, field
 from fractions import Fraction
-from typing import Optional
+from typing import Callable, Optional
 
 import numpy as np
 
@@ -150,9 +150,16 @@ def shors_algorithm(
     rng: np.random.Generator,
     max_attempts: int = 20,
     n_count: Optional[int] = None,
+    period_finder: Callable[..., PeriodFindingResult] = find_period_quantum,
 ) -> ShorResult:
     """Full pipeline: classical pre-checks, then repeated quantum period-finding attempts
-    until nontrivial factors are found or max_attempts is exhausted."""
+    until nontrivial factors are found or max_attempts is exhausted.
+
+    `period_finder` defaults to the honest full-statevector simulation (find_period_quantum);
+    pass `quantum.fast_sim.find_period_quantum_fast` to use the sampling shortcut for N too
+    large for the honest simulator. Every classical pre-check and the retry/failure-mode
+    logic below is identical either way — only how a single measurement gets produced differs.
+    """
     if N < 4:
         raise ValueError("N must be >= 4")
     if is_prime(N):
@@ -179,7 +186,7 @@ def shors_algorithm(
             attempts.append(AttemptLog(a=a, outcome=f"gcd(a,N)={g} != 1: trivial factor, no quantum step needed"))
             return ShorResult(N, (g, N // g), attempts)
 
-        result = find_period_quantum(a, N, rng, n_count=n_count)
+        result = period_finder(a, N, rng, n_count=n_count)
         log = AttemptLog(a=a, measured=result.measured, period_candidate=result.period)
         r = result.period
 

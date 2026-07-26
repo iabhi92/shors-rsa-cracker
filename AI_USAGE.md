@@ -71,6 +71,35 @@ Format per entry: date, what was built/decided, what AI contributed vs. what was
   (not dumped at the end) as part of the "take me on a journey" framing for this project.
 - **Chat link / screenshot**: _(add link to this Claude Code session or screenshot here)_
 
+## 2026-07-26 — Fast/sampling simulator for larger demo N
+
+- **What**: Built `quantum/fast_sim.py` — an algassert-style shortcut that samples a Shor's
+  period-finding measurement directly from the theoretically expected distribution (given
+  the classically-known multiplicative order `r`) instead of paying the honest simulator's
+  `O(2^(n_count+n_target))` statevector cost. Refactored `quantum/shor.py`'s
+  `shors_algorithm` to take a pluggable `period_finder` so the honest and fast paths share
+  100% of the classical retry/failure-mode logic — no duplicated, divergence-prone code.
+  Cross-validated statistically against the honest simulator in
+  `tests/test_quantum_fast_sim.py`: tight agreement when the period divides `2^n_count`
+  exactly (both distributions are exact delta peaks), looser but still bounded agreement
+  otherwise (documented as a real, named approximation — the fast sampler collapses each
+  peak's real spread to a single point). Also demonstrated the actual point of this module:
+  factoring N=101*103=10403 in under a second — a case the honest simulator couldn't touch
+  (it would need ~42 qubits, i.e. tens of terabytes of dense statevector).
+- **AI contribution**: Claude Code wrote the module, the shors_algorithm refactor, and the
+  test suite — including catching its own first-draft test bug (an overly strict 0.15
+  total-variation-distance bound that failed for non-exact-divisor periods because the
+  approximation genuinely isn't that tight there) and fixing it by splitting into an exact
+  case (tight bound) and an approximate case (looser, explicitly justified bound) rather than
+  loosening the threshold blindly. Also made a point of documenting, prominently, what this
+  module is *not*: a scalability result. It only works because the demo can afford to
+  classically compute the period first, which is exactly as hard as factoring for real
+  RSA-sized N — that caveat is load-bearing for not overclaiming what's been built.
+- **Human contribution**: Same "rock solid core" steer as prior entries — specifically
+  motivated the decision to cross-validate this shortcut against the honest simulator rather
+  than just asserting it's close enough.
+- **Chat link / screenshot**: _(add link to this Claude Code session or screenshot here)_
+
 ## 2026-07-26 — RSA core + classical attacker suite
 
 - **What**: Implemented RSA fully from scratch (`rsa/primes.py` Miller-Rabin, `rsa/keygen.py`
