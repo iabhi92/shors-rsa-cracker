@@ -24,6 +24,20 @@ pip install -r requirements.txt
 pytest
 ```
 
+## Try it
+
+```bash
+python scripts/demo_cli.py         # RSA keygen/encrypt/decrypt round trip
+python scripts/benchmark_classical.py   # measured classical-attack scaling -> data/
+python scripts/demo_crack.py       # the full story: encrypt, then break it with Shor's algorithm
+```
+
 ## Status
 
-Work in progress — see `AI_USAGE.md` and commit history for the build log. Current milestone: RSA from scratch.
+Core is built and tested (104 tests, `pytest`): RSA from scratch, a 4-method classical
+attacker with a measured scaling benchmark, a from-scratch quantum statevector simulator
+(gates, QFT verified against the exact DFT matrix), and a full Shor's-algorithm pipeline that
+handles every known real failure mode and breaks a real (toy-sized) RSA key end to end. Read
+`notes/` for the math. The live website is intentionally deferred to a later stage.
+
+See `AI_USAGE.md` and commit history for the full build log.

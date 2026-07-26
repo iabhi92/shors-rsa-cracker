@@ -55,6 +55,22 @@ Format per entry: date, what was built/decided, what AI contributed vs. what was
   verifying the QFT against ground truth instead of shipping an unverified derivation.
 - **Chat link / screenshot**: _(add link to this Claude Code session or screenshot here)_
 
+## 2026-07-26 — Crash-course notes
+
+- **What**: Wrote `notes/01-quantum-basics.md`, `notes/02-qft-and-period-finding.md`,
+  `notes/03-shors-algorithm-math.md` — covering qubits/superposition/tensor products/gates,
+  the QFT and why it finds periods, and the full factoring-to-order-finding reduction —
+  written to explain *this specific codebase* (cites actual file/test names) rather than
+  being generic textbook material, and citing the mentor-provided resources (Aaronson blog,
+  algassert.com/post/1718, the Cirq Shor's tutorial) where they directly informed a design
+  or verification choice.
+- **AI contribution**: Claude Code wrote the notes, explicitly documenting the modexp-as-
+  permutation scope boundary and the continued-fractions gcd-collision subtlety discovered
+  while testing, so the reasoning behind both is traceable later.
+- **Human contribution**: Requested the notes be built progressively alongside the code
+  (not dumped at the end) as part of the "take me on a journey" framing for this project.
+- **Chat link / screenshot**: _(add link to this Claude Code session or screenshot here)_
+
 ## 2026-07-26 — RSA core + classical attacker suite
 
 - **What**: Implemented RSA fully from scratch (`rsa/primes.py` Miller-Rabin, `rsa/keygen.py`
