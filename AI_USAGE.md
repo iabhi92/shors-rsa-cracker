@@ -21,6 +21,40 @@ Format per entry: date, what was built/decided, what AI contributed vs. what was
   Google Cirq Shor's tutorial, algassert.com posts), quality bar set by mentor's feedback on prior toy demos.
 - **Chat link / screenshot**: _(add link to this Claude Code session or screenshot here)_
 
+## 2026-07-26 — Quantum statevector simulator + Shor's algorithm (website deferred)
+
+- **What**: User steered scope: defer the website to a later stage, put the effort into
+  making the RSA/classical-attacker/quantum core "rock solid" rather than something that
+  looks skimmed in a couple of hours. Built `quantum/statevector.py` (a from-scratch NumPy
+  statevector simulator — registers, single-qubit gates, controlled gates, entanglement,
+  marginal probabilities, measurement) and `quantum/qft.py` (QFT/inverse-QFT circuits,
+  deliberately verified against the exact DFT matrix — ground truth, not hand-derived — for
+  every basis state and random states across 1-6 qubits, plus a round-trip check). Then
+  `quantum/modexp.py` (controlled modular exponentiation, implemented as a permutation on
+  the statevector — documented explicitly as the one scope boundary: we don't re-derive
+  reversible arithmetic circuits gate-by-gate, we implement the exact unitary they'd realize)
+  and `quantum/shor.py` (full pipeline: superposition, controlled-U, inverse QFT, measurement,
+  continued-fractions period extraction, and the classical gcd step — with real handling of
+  every known Shor's-algorithm failure mode: odd period, a^(r/2)=-1 mod N, gcd(a,N)!=1
+  shortcuts, N even/prime-power pre-checks). 104 tests pass project-wide. `scripts/demo_crack.py`
+  demonstrates the full circle: generate a real RSA keypair, encrypt a secret, factor the
+  public modulus with nothing but Shor's algorithm, recover the private key, decrypt —
+  without the "attacker" ever touching the private key.
+- **AI contribution**: Claude Code wrote all of the above, including catching two real bugs
+  via the test suite before they shipped: (1) a test's own wrong assumption that all four
+  exact-peak measurements for N=15 recover the period — corrected after checking the math:
+  measured=128 corresponds to k=2 sharing a factor with r=4, a genuine expected Shor's-
+  algorithm collision, not a bug; (2) a real bug in `rsa/core.py` — `encrypt_bytes` on tiny
+  demo-sized N (e.g. 35, 143) crashed with a bare `ZeroDivisionError` instead of a clear
+  error, now fixed with an explicit message pointing at `encrypt_int`/`decrypt_int` for keys
+  too small to hold a byte. Also decided the modexp-as-permutation scope boundary rather
+  than building gate-level reversible arithmetic, and validated the QFT circuit numerically
+  against the DFT matrix rather than trusting a hand derivation.
+- **Human contribution**: The scope-narrowing steer (no website yet, make the core solid)
+  that directly drove the property-based tests, the multi-failure-mode Shor's pipeline, and
+  verifying the QFT against ground truth instead of shipping an unverified derivation.
+- **Chat link / screenshot**: _(add link to this Claude Code session or screenshot here)_
+
 ## 2026-07-26 — RSA core + classical attacker suite
 
 - **What**: Implemented RSA fully from scratch (`rsa/primes.py` Miller-Rabin, `rsa/keygen.py`

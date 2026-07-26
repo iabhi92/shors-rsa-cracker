@@ -15,7 +15,13 @@ from rsa.keygen import PrivateKey, PublicKey
 
 def _block_size(n: int) -> int:
     """Largest number of bytes guaranteed to encode to an integer < n."""
-    return (n.bit_length() - 1) // 8
+    size = (n.bit_length() - 1) // 8
+    if size == 0:
+        raise ValueError(
+            f"n={n} ({n.bit_length()} bits) is too small to hold even one byte of message "
+            "(need n > 255); use encrypt_int/decrypt_int directly for keys this small"
+        )
+    return size
 
 
 def encrypt_int(m: int, public_key: PublicKey) -> int:

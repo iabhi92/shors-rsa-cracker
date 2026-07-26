@@ -88,6 +88,15 @@ def test_encrypt_int_rejects_out_of_range_message():
         encrypt_int(kp.public.n, kp.public)
 
 
+def test_encrypt_bytes_on_modulus_too_small_for_one_byte_raises_clear_error():
+    # n=35 (5 bits) can't hold even a single byte (0-255); this must fail loudly with a
+    # clear message, not a bare ZeroDivisionError from the block-size arithmetic.
+    from rsa.keygen import PublicKey
+
+    with pytest.raises(ValueError, match="too small"):
+        encrypt_bytes(b"hi", PublicKey(n=35, e=5))
+
+
 def test_encrypt_decrypt_text_round_trip_short_message():
     kp = generate_keypair(256)
     plaintext = "hi"
