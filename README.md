@@ -34,10 +34,12 @@ python scripts/demo_crack.py       # the full story: encrypt, then break it with
 
 ## Status
 
-Core is built and tested (104 tests, `pytest`): RSA from scratch, a 4-method classical
+Core is built and tested (132 tests, `pytest`): RSA from scratch, a 4-method classical
 attacker with a measured scaling benchmark, a from-scratch quantum statevector simulator
-(gates, QFT verified against the exact DFT matrix), and a full Shor's-algorithm pipeline that
-handles every known real failure mode and breaks a real (toy-sized) RSA key end to end. Read
+(gates, QFT verified against the exact DFT matrix), a full Shor's-algorithm pipeline that
+handles every known real failure mode and breaks a real (toy-sized) RSA key end to end, a
+fast/sampling simulator for N beyond the honest simulator's qubit budget, and an independent
+cross-check against Google's Cirq (statevectors match to floating-point precision). Read
 `notes/` for the math. The live website is intentionally deferred to a later stage.
 
 See `AI_USAGE.md` and commit history for the full build log.

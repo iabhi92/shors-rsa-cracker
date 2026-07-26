@@ -100,6 +100,27 @@ Format per entry: date, what was built/decided, what AI contributed vs. what was
   than just asserting it's close enough.
 - **Chat link / screenshot**: _(add link to this Claude Code session or screenshot here)_
 
+## 2026-07-26 — Cirq cross-validation
+
+- **What**: Built `quantum/cirq_shor.py`, rebuilding the exact same period-finding circuit
+  (superposition, controlled modular exponentiation via `cirq.ArithmeticGate`, inverse QFT)
+  using Google's Cirq — the framework the mentor linked. `tests/test_quantum_cirq_shor.py`
+  compares full statevectors between our from-scratch simulator and Cirq's for several
+  configurations: exact match to floating-point precision (`atol=1e-6`) every time. Also
+  cross-validated `shors_algorithm` end to end using Cirq as the `period_finder`.
+- **AI contribution**: Claude Code wrote the module and tests, and hit — then fixed — a real
+  scoping mistake: the first draft of `tests/test_quantum_cirq_shor.py` mirrored the full
+  `SMALL_COMPOSITES` sweep from the honest-simulator test suite (N up to 65) using Cirq's
+  default `n_count`. That run hung for 7+ minutes and had to be killed; profiling showed
+  Cirq's general-purpose simulator costs ~10s per shot on an 18-qubit circuit versus our own
+  simulator's ~0.1s for the same problem — a constant-factor difference, not a correctness
+  issue, but one that made naively mirroring the other test file's scope impractical. Trimmed
+  to a couple of small, fast N values, since the strongest cross-validation signal (exact
+  statevector agreement) doesn't need repeating at every N to be convincing.
+- **Human contribution**: This was the "stretch/validation phase" outlined in the original
+  project roadmap (Cirq as a second opinion on the from-scratch simulator).
+- **Chat link / screenshot**: _(add link to this Claude Code session or screenshot here)_
+
 ## 2026-07-26 — RSA core + classical attacker suite
 
 - **What**: Implemented RSA fully from scratch (`rsa/primes.py` Miller-Rabin, `rsa/keygen.py`
