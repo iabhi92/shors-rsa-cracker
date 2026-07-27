@@ -12,27 +12,62 @@ export class ApiError extends Error {
   }
 }
 
+// Free-tier hosting (Render) spins the backend down after ~15 min idle. The instance's own
+// edge proxy answers immediately with a 502/503/504 while it boots back up, rather than the
+// request just hanging -- so every single call can fail outright for the first 30-50s after a
+// gap, not just one. Retrying those specific transient statuses (and raw network failures,
+// e.g. a request that lands mid-restart) with backoff turns that into "briefly slower" instead
+// of "the whole site is broken." Real application errors (400/404/422/etc.) are never retried
+// -- those are correct, meaningful responses, not infrastructure hiccups.
+const WAKE_RETRY_DELAYS_MS = [1500, 3000, 6000, 10000, 15000, 15000]
+const RETRYABLE_STATUSES = new Set([502, 503, 504])
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, {
-    headers: { 'Content-Type': 'application/json' },
-    ...options,
-  })
-  if (!res.ok) {
-    let detail = res.statusText
+  let lastError: unknown
+  for (let attempt = 0; attempt <= WAKE_RETRY_DELAYS_MS.length; attempt++) {
+    let res: Response
     try {
-      const body = await res.json()
-      detail =
-        typeof body.detail === 'string'
-          ? body.detail
-          : Array.isArray(body.detail)
-            ? body.detail.map((d: { msg?: string }) => d.msg ?? JSON.stringify(d)).join('; ')
-            : JSON.stringify(body.detail)
-    } catch {
-      // response wasn't JSON; fall back to statusText
+      res = await fetch(`${BASE}${path}`, {
+        headers: { 'Content-Type': 'application/json' },
+        ...options,
+      })
+    } catch (err) {
+      // A thrown fetch (network error, CORS preflight failure, DNS, connection refused) is
+      // exactly as likely to be "backend still waking up" as a 502 is -- treat it the same way.
+      lastError = err
+      if (attempt < WAKE_RETRY_DELAYS_MS.length) {
+        await sleep(WAKE_RETRY_DELAYS_MS[attempt])
+        continue
+      }
+      throw new ApiError(0, 'Could not reach the backend after several attempts.')
     }
-    throw new ApiError(res.status, detail)
+    if (!res.ok) {
+      if (RETRYABLE_STATUSES.has(res.status) && attempt < WAKE_RETRY_DELAYS_MS.length) {
+        lastError = new ApiError(res.status, res.statusText)
+        await sleep(WAKE_RETRY_DELAYS_MS[attempt])
+        continue
+      }
+      let detail = res.statusText
+      try {
+        const body = await res.json()
+        detail =
+          typeof body.detail === 'string'
+            ? body.detail
+            : Array.isArray(body.detail)
+              ? body.detail.map((d: { msg?: string }) => d.msg ?? JSON.stringify(d)).join('; ')
+              : JSON.stringify(body.detail)
+      } catch {
+        // response wasn't JSON; fall back to statusText
+      }
+      throw new ApiError(res.status, detail)
+    }
+    return res.json() as Promise<T>
   }
-  return res.json() as Promise<T>
+  throw lastError instanceof Error ? lastError : new ApiError(0, 'Could not reach the backend.')
 }
 
 export function apiGet<T>(path: string): Promise<T> {

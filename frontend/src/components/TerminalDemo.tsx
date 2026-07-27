@@ -94,11 +94,12 @@ export default function TerminalDemo() {
       // genuine part of the algorithm but a worse first impression with no measured/period
       // values to show. Still a real, live call every time -- just a fixed, honest choice of
       // which real computation to showcase (the same reasoning scripts/demo_crack.py uses
-      // fixed p, q, e for).
+      // fixed p, q, e for). apiPost itself already retries through a cold-started backend
+      // (see api/client.ts) -- this only fires once that's genuinely exhausted.
       const result = await apiPost<ShorResponse>('/shor/run', { n: DEMO_N, a: 13, backend: 'honest' })
       if (runId.current === id) setLines(formatLines(result))
     } catch {
-      if (runId.current === id) setError('Could not reach the backend -- start it and reload (see README).')
+      if (runId.current === id) setError('Could not reach the backend -- it may be down; try reloading in a minute.')
     } finally {
       if (runId.current === id) setRunning(false)
     }
@@ -162,7 +163,12 @@ export default function TerminalDemo() {
               </div>
             )
           })}
-        {!lines && !error && <p className="text-ink-muted">connecting…</p>}
+        {!lines && !error && (
+          <p className="text-ink-muted">
+            connecting… (free-tier hosting sleeps when idle -- first load can take up to a
+            minute)
+          </p>
+        )}
       </div>
     </div>
   )
