@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 
 from quantum.qft import apply_inverse_qft, apply_qft, dft_matrix
-from quantum.statevector import H, X, Y, Z, QuantumRegister
+from quantum.statevector import H, QuantumRegister, X, Y, Z
 
 SQRT2_INV = 1 / np.sqrt(2)
 
@@ -81,6 +81,59 @@ def test_controlled_gate_rejects_same_control_and_target():
         reg.apply_controlled_gate(X, control=0, target=0)
 
 
+# --- qubit-index bounds checking ------------------------------------------------------
+#
+# Plain list/array indexing treats a negative index as "count from the end" rather than
+# rejecting it, so an off-by-one that goes negative would otherwise silently apply a gate to
+# the wrong qubit instead of raising — checked directly here, not just for the "out of range
+# on the high end" case that would raise anyway via a natural IndexError.
+
+
+def test_apply_gate_rejects_negative_qubit_index():
+    reg = QuantumRegister(3, 0)
+    with pytest.raises(ValueError):
+        reg.apply_gate(X, -1)
+
+
+def test_apply_gate_rejects_too_large_qubit_index():
+    reg = QuantumRegister(3, 0)
+    with pytest.raises(ValueError):
+        reg.apply_gate(X, 3)
+
+
+@pytest.mark.parametrize("control,target", [(-1, 0), (0, -1), (3, 0), (0, 3)])
+def test_apply_controlled_gate_rejects_out_of_range_indices(control, target):
+    reg = QuantumRegister(3, 0)
+    with pytest.raises(ValueError):
+        reg.apply_controlled_gate(X, control=control, target=target)
+
+
+def test_apply_multi_controlled_gate_rejects_out_of_range_control():
+    reg = QuantumRegister(3, 0)
+    with pytest.raises(ValueError):
+        reg.apply_multi_controlled_gate(X, controls=[0, -1], target=2)
+
+
+def test_apply_multi_controlled_gate_rejects_out_of_range_target():
+    reg = QuantumRegister(3, 0)
+    with pytest.raises(ValueError):
+        reg.apply_multi_controlled_gate(X, controls=[0, 1], target=3)
+
+
+@pytest.mark.parametrize("qubit_a,qubit_b", [(-1, 0), (0, -1), (3, 0), (0, 3)])
+def test_apply_swap_rejects_out_of_range_indices(qubit_a, qubit_b):
+    reg = QuantumRegister(3, 0)
+    with pytest.raises(ValueError):
+        reg.apply_swap(qubit_a, qubit_b)
+
+
+@pytest.mark.parametrize("control,qubit_a,qubit_b", [(-1, 0, 1), (0, -1, 1), (0, 1, -1), (3, 0, 1)])
+def test_apply_controlled_swap_rejects_out_of_range_indices(control, qubit_a, qubit_b):
+    reg = QuantumRegister(3, 0)
+    with pytest.raises(ValueError):
+        reg.apply_controlled_swap(control, qubit_a, qubit_b)
+
+
 def test_bell_state_entanglement():
     reg = QuantumRegister(2, 0)
     reg.apply_gate(H, 0)
@@ -99,6 +152,76 @@ def test_ghz_state_three_qubits():
     expected[0b000] = SQRT2_INV
     expected[0b111] = SQRT2_INV
     assert np.allclose(reg.state, expected)
+
+
+# --- multi-controlled gates and controlled-swap, brute-force checked ----------------------
+
+
+def test_multi_controlled_gate_is_toffoli_truth_table():
+    for c0, c1, t in [(a, b, c) for a in (0, 1) for b in (0, 1) for c in (0, 1)]:
+        initial = (c0 << 2) | (c1 << 1) | t
+        reg = QuantumRegister(3, initial)
+        reg.apply_multi_controlled_gate(X, controls=[0, 1], target=2)
+        expected_t = t ^ (1 if (c0 == 1 and c1 == 1) else 0)
+        expected = (c0 << 2) | (c1 << 1) | expected_t
+        assert int(np.argmax(np.abs(reg.state))) == expected
+
+
+def test_multi_controlled_gate_matches_brute_force_on_random_states():
+    rng = np.random.default_rng(11)
+    for _ in range(50):
+        n = int(rng.integers(3, 6))
+        controls = list(rng.choice(n, size=2, replace=False))
+        target = int(rng.choice([q for q in range(n) if q not in controls]))
+        state = _random_state(n, rng)
+        reg = QuantumRegister.from_statevector(state)
+        reg.apply_multi_controlled_gate(X, controls, target)
+
+        expected = np.zeros_like(state)
+        for i in range(2**n):
+            bits = [(i >> (n - 1 - b)) & 1 for b in range(n)]
+            j = i ^ (1 << (n - 1 - target)) if all(bits[c] == 1 for c in controls) else i
+            expected[j] += state[i]
+        assert np.allclose(reg.state, expected)
+
+
+def test_multi_controlled_gate_rejects_target_among_controls():
+    reg = QuantumRegister(3, 0)
+    with pytest.raises(ValueError):
+        reg.apply_multi_controlled_gate(X, controls=[0, 1], target=1)
+
+
+def test_controlled_swap_is_fredkin_truth_table():
+    for c, a, b in [(x, y, z) for x in (0, 1) for y in (0, 1) for z in (0, 1)]:
+        initial = (c << 2) | (a << 1) | b
+        reg = QuantumRegister(3, initial)
+        reg.apply_controlled_swap(control=0, qubit_a=1, qubit_b=2)
+        expected_a, expected_b = (b, a) if c == 1 else (a, b)
+        expected = (c << 2) | (expected_a << 1) | expected_b
+        assert int(np.argmax(np.abs(reg.state))) == expected
+
+
+def test_controlled_swap_matches_brute_force_on_random_states():
+    rng = np.random.default_rng(12)
+    for _ in range(50):
+        n = int(rng.integers(3, 6))
+        control = int(rng.choice(n))
+        remaining = [q for q in range(n) if q != control]
+        qa, qb = (int(q) for q in rng.choice(remaining, size=2, replace=False))
+        state = _random_state(n, rng)
+        reg = QuantumRegister.from_statevector(state)
+        reg.apply_controlled_swap(control, qa, qb)
+
+        expected = np.zeros_like(state)
+        for i in range(2**n):
+            bits = [(i >> (n - 1 - q)) & 1 for q in range(n)]
+            if bits[control] == 1:
+                bits[qa], bits[qb] = bits[qb], bits[qa]
+            j = 0
+            for bit in bits:
+                j = (j << 1) | bit
+            expected[j] += state[i]
+        assert np.allclose(reg.state, expected)
 
 
 # --- swap, marginals, measurement ---------------------------------------------------------

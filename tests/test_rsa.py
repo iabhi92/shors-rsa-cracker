@@ -6,6 +6,7 @@ from hypothesis import strategies as st
 
 from rsa.core import (
     _block_size,
+    _pkcs7_unpad,
     decrypt_bytes,
     decrypt_int,
     decrypt_text,
@@ -149,8 +150,8 @@ def test_encrypt_decrypt_message_exactly_multiple_blocks(keypair):
 
 
 def test_encrypt_decrypt_message_ending_in_byte_that_looks_like_padding(keypair):
-    # PKCS7 unpadding trusts the last byte; make sure real data ending in e.g. 0x01
-    # doesn't get misinterpreted before the padding we appended.
+    # Real data ending in e.g. 0x01 must not get misinterpreted as (partial) padding before
+    # the real PKCS7 padding we appended on top of it.
     message = b"end of message is one byte: \x01"
     ciphertext = encrypt_bytes(message, keypair.public)
     assert decrypt_bytes(ciphertext, keypair.private) == message
@@ -166,6 +167,61 @@ def test_every_ciphertext_block_is_within_modulus_range(keypair):
     ciphertext = encrypt_text("some reasonably long test message here", keypair.public)
     for block in ciphertext:
         assert 0 <= block < keypair.public.n
+
+
+# --- decrypt_bytes: a corrupted ciphertext block must fail loudly too --------------------
+#
+# block_size = (n.bit_length() - 1) // 8 is strictly smaller than n's own byte length, so a
+# legitimately-encrypted block always decrypts to m < 256**block_size, but decrypt_int can
+# return any m < n -- some of which don't fit in block_size bytes. A prior version of
+# decrypt_bytes called m.to_bytes(block_size, "big") unconditionally and crashed with an
+# unhandled OverflowError (found via this project's own ciphertext-tampering demo, which
+# flips ciphertext bits and decrypts whatever comes out).
+
+
+def test_decrypt_bytes_rejects_block_that_overflows_block_size(keypair):
+    block_size = _block_size(keypair.public.n)
+    oversized_m = 256**block_size  # smallest value that no longer fits in block_size bytes
+    assert oversized_m < keypair.public.n
+    bad_ciphertext = [encrypt_int(oversized_m, keypair.public)]
+    with pytest.raises(ValueError):
+        decrypt_bytes(bad_ciphertext, keypair.private)
+
+
+# --- _pkcs7_unpad: malformed/attacker-influenced input must fail loudly, not silently -----
+#
+# Textbook RSA is malleable (see rsa/core.py's module docstring, SECURITY.md): an attacker
+# can flip ciphertext bits and produce a "valid" (decryptable) block whose plaintext bytes
+# are garbage. A prior version of _pkcs7_unpad trusted data[-1] as pad_len without validating
+# it, and had two real, silent-wrong-output bugs on exactly that kind of malformed input.
+
+
+def test_pkcs7_unpad_rejects_zero_pad_len():
+    # The actual bug: Python's data[:-0] slices to data[:0] (empty), not "no truncation" —
+    # a decrypted block whose last byte happens to be 0x00 must raise, not silently return
+    # an empty message.
+    with pytest.raises(ValueError):
+        _pkcs7_unpad(b"hello" + bytes([0]), block_size=8)
+
+
+def test_pkcs7_unpad_rejects_pad_len_larger_than_block_size():
+    with pytest.raises(ValueError):
+        _pkcs7_unpad(b"hello" + bytes([200]), block_size=8)
+
+
+def test_pkcs7_unpad_rejects_inconsistent_padding_bytes():
+    # Last byte claims 3 bytes of padding, but the bytes before it aren't all 0x03.
+    with pytest.raises(ValueError):
+        _pkcs7_unpad(b"hel" + bytes([1, 2, 3]), block_size=8)
+
+
+def test_pkcs7_unpad_rejects_empty_input():
+    with pytest.raises(ValueError):
+        _pkcs7_unpad(b"", block_size=8)
+
+
+def test_pkcs7_unpad_accepts_well_formed_padding():
+    assert _pkcs7_unpad(b"hello" + bytes([3, 3, 3]), block_size=8) == b"hello"
 
 
 # --- Property-based tests (hypothesis) -------------------------------------------------

@@ -17,7 +17,6 @@ precision) for every case tried — see tests/test_quantum_cirq_shor.py.
 """
 
 import math
-from typing import Optional
 
 import cirq
 import numpy as np
@@ -41,7 +40,11 @@ class ModularExp(cirq.ArithmeticGate):
     def with_registers(self, *new_registers):
         return ModularExp(new_registers[0], new_registers[1], new_registers[2], new_registers[3])
 
-    def apply(self, target: int, exponent: int, base: int, modulus: int):
+    def apply(self, target: int, exponent: int, base: int, modulus: int):  # type: ignore[override]
+        # cirq.ArithmeticGate.apply is typed generically as *register_values: int; Cirq's own
+        # tutorials give subclasses named, gate-specific parameters instead (registers() above
+        # is what tells Cirq how to map its call onto these names) — expected, not a real
+        # LSP violation, so this narrows the (already Any-typed) base signature deliberately.
         if target >= modulus:
             return target
         return (target * base**exponent) % modulus
@@ -69,7 +72,7 @@ def build_circuit(a: int, N: int, n_count: int) -> tuple[cirq.Circuit, list[cirq
 
 
 def find_period_quantum_cirq(
-    a: int, N: int, rng: np.random.Generator, n_count: Optional[int] = None
+    a: int, N: int, rng: np.random.Generator, n_count: int | None = None
 ) -> PeriodFindingResult:
     """Same signature/return type as quantum.shor.find_period_quantum, so this can be used
     interchangeably as shors_algorithm's `period_finder` — but runs the circuit through Cirq's

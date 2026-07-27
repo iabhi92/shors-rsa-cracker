@@ -1,4 +1,3 @@
-import math
 
 import pytest
 from hypothesis import HealthCheck, given, settings
@@ -11,7 +10,6 @@ from attacker.classical import (
     pollards_rho,
     trial_division,
 )
-from rsa.keygen import generate_keypair
 from rsa.primes import generate_prime, is_prime
 
 METHODS_THAT_FACTOR_ANY_SEMIPRIME = [trial_division, pollards_rho]

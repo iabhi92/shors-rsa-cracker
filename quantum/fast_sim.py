@@ -38,7 +38,6 @@ by comparing this sampler's and the honest simulator's overall shors_algorithm s
 """
 
 import math
-from typing import Optional
 
 import numpy as np
 
@@ -59,7 +58,7 @@ def multiplicative_order(a: int, N: int) -> int:
 
 
 def find_period_quantum_fast(
-    a: int, N: int, rng: np.random.Generator, n_count: Optional[int] = None
+    a: int, N: int, rng: np.random.Generator, n_count: int | None = None
 ) -> PeriodFindingResult:
     """Sample a control-register measurement from the idealized theoretical distribution,
     without simulating any statevector. Same signature/return type as

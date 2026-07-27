@@ -14,9 +14,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import numpy as np
 
+from quantum.shor import shors_algorithm
 from rsa.core import decrypt_int, encrypt_int
 from rsa.keygen import KeyPair, PrivateKey, PublicKey, mod_inverse
-from quantum.shor import shors_algorithm
 
 
 def small_keypair(p: int, q: int, e: int) -> KeyPair:

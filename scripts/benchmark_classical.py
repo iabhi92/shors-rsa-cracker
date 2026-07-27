@@ -11,7 +11,6 @@ Writes: data/classical_benchmark.csv, data/classical_benchmark.png
 
 import csv
 import sys
-import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))

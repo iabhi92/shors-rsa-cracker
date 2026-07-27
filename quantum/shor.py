@@ -1,6 +1,12 @@
-"""Shor's algorithm: quantum period-finding (honestly simulated, see quantum/modexp.py for
-the one documented shortcut) plus the classical post-processing that turns a found period
-into RSA's secret prime factors.
+"""Shor's algorithm: quantum period-finding plus the classical post-processing that turns a
+found period into RSA's secret prime factors.
+
+Two interchangeable period-finding backends (both usable as `shors_algorithm`'s
+`period_finder`): find_period_quantum uses quantum/modexp.py's modular-exponentiation
+permutation shortcut (cheaper, more qubits of N reachable); find_period_quantum_gate_level
+uses quantum/modexp_circuit.py's honest gate-level reversible-arithmetic circuit (no
+shortcuts, more ancilla qubits, smaller N reachable). They're cross-validated
+statevector-exact against each other in tests/test_quantum_modexp_circuit.py.
 
 Pipeline per attempt:
   1. Pick a random a coprime with N (if gcd(a, N) != 1, that gcd IS a factor — no quantum
@@ -16,13 +22,14 @@ Pipeline per attempt:
 """
 
 import math
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from fractions import Fraction
-from typing import Callable, Optional
 
 import numpy as np
 
 from quantum.modexp import apply_modular_exponentiation
+from quantum.modexp_circuit import ancilla_qubit_count, apply_modular_exponentiation_circuit
 from quantum.qft import apply_inverse_qft
 from quantum.statevector import H, QuantumRegister
 from rsa.primes import is_prime
@@ -36,21 +43,21 @@ class PeriodFindingResult:
     n_target: int
     measured: int
     measured_probability: float
-    period: Optional[int]
+    period: int | None
 
 
 @dataclass
 class AttemptLog:
     a: int
-    measured: Optional[int] = None
-    period_candidate: Optional[int] = None
+    measured: int | None = None
+    period_candidate: int | None = None
     outcome: str = ""
 
 
 @dataclass
 class ShorResult:
     N: int
-    factors: Optional[tuple[int, int]]
+    factors: tuple[int, int] | None
     attempts: list[AttemptLog] = field(default_factory=list)
 
 
@@ -80,7 +87,7 @@ def continued_fraction_convergents(numerator: int, denominator: int) -> list[Fra
     return convergents
 
 
-def extract_period_from_measurement(measured: int, n_count: int, a: int, N: int) -> Optional[int]:
+def extract_period_from_measurement(measured: int, n_count: int, a: int, N: int) -> int | None:
     """Turn a control-register measurement into a verified period, or None if it doesn't
     yield one. measured/2^n_count approximates k/r for some k; continued fractions recovers
     candidate r's, each checked classically against a^r == 1 mod N before being trusted."""
@@ -97,7 +104,7 @@ def extract_period_from_measurement(measured: int, n_count: int, a: int, N: int)
 
 
 def find_period_quantum(
-    a: int, N: int, rng: np.random.Generator, n_count: Optional[int] = None
+    a: int, N: int, rng: np.random.Generator, n_count: int | None = None
 ) -> PeriodFindingResult:
     """Run one shot of the quantum period-finding circuit via full statevector simulation."""
     if math.gcd(a, N) != 1:
@@ -135,7 +142,57 @@ def find_period_quantum(
     )
 
 
-def _perfect_power(N: int) -> Optional[tuple[int, int]]:
+def find_period_quantum_gate_level(
+    a: int, N: int, rng: np.random.Generator, n_count: int | None = None
+) -> PeriodFindingResult:
+    """Same contract as find_period_quantum, but with zero shortcuts: modular exponentiation
+    is realized by quantum/modexp_circuit.py's gate-level circuit (elementary single- and
+    multi-controlled single-qubit gates only — reversible adders, modular multipliers, the
+    works) instead of quantum/modexp.py's permutation shortcut. The two are cross-validated
+    statevector-exact in tests/test_quantum_modexp_circuit.py; this function exists to prove
+    that equivalence also holds end to end, through the inverse QFT and measurement, not
+    just at the modexp step in isolation.
+
+    Costs ancilla_qubit_count(n_target) = n_target + 2 extra qubits over find_period_quantum
+    for the same N, so it reaches smaller N in practice — this is the *more* honest simulator,
+    not a scaled-up one; see find_period_quantum for the default, cheaper-to-run path."""
+    if math.gcd(a, N) != 1:
+        raise ValueError("a must be coprime with N")
+    n_target = N.bit_length()
+    if n_count is None:
+        n_count = default_n_count(N)
+
+    n_ancilla = ancilla_qubit_count(n_target)
+    control_qubits = list(range(n_count))
+    # ancilla (b register + flag) occupies the low bits, so target=1 sits just above it —
+    # see quantum/modexp_circuit.py's module docstring for the exact qubit layout.
+    register = QuantumRegister(n_count + n_target + n_ancilla, initial_value=1 << n_ancilla)
+
+    for q in control_qubits:
+        register.apply_gate(H, q)
+
+    apply_modular_exponentiation_circuit(register, n_count, n_target, a, N)
+
+    apply_inverse_qft(register, control_qubits)
+
+    control_probs = register.marginal_probabilities(control_qubits)
+    control_probs = control_probs / control_probs.sum()
+    measured = int(rng.choice(2**n_count, p=control_probs))
+
+    period = extract_period_from_measurement(measured, n_count, a, N)
+
+    return PeriodFindingResult(
+        N=N,
+        a=a,
+        n_count=n_count,
+        n_target=n_target,
+        measured=measured,
+        measured_probability=float(control_probs[measured]),
+        period=period,
+    )
+
+
+def _perfect_power(N: int) -> tuple[int, int] | None:
     """If N == base**exponent for some exponent >= 2, return (base, exponent)."""
     for exponent in range(2, N.bit_length() + 1):
         root = round(N ** (1 / exponent))
@@ -149,7 +206,7 @@ def shors_algorithm(
     N: int,
     rng: np.random.Generator,
     max_attempts: int = 20,
-    n_count: Optional[int] = None,
+    n_count: int | None = None,
     period_finder: Callable[..., PeriodFindingResult] = find_period_quantum,
 ) -> ShorResult:
     """Full pipeline: classical pre-checks, then repeated quantum period-finding attempts

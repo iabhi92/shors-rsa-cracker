@@ -7,6 +7,7 @@ from quantum.shor import (
     continued_fraction_convergents,
     extract_period_from_measurement,
     find_period_quantum,
+    find_period_quantum_gate_level,
     shors_algorithm,
 )
 from rsa.core import decrypt_int, encrypt_int
@@ -85,6 +86,62 @@ def test_period_finding_distribution_matches_theory_exactly_for_power_of_two_per
     assert set(counts.keys()) == {0, 64, 128, 192}
     for count in counts.values():
         assert count / shots == pytest.approx(0.25, abs=0.08)
+
+
+# --- find_period_quantum_gate_level: the honest, no-shortcuts backend ---------------------
+#
+# quantum/modexp_circuit.py builds controlled modular exponentiation from elementary gates
+# (reversible adders -> modular multipliers -> exponentiation) rather than
+# quantum/modexp.py's permutation shortcut. It costs more ancilla qubits, so these tests use
+# a smaller n_count than find_period_quantum's tests above to keep runtime reasonable —
+# tests/test_quantum_modexp_circuit.py is where the two are proven statevector-exact against
+# each other at full precision; what's checked here is that the honest path also produces a
+# correct measurement distribution end to end (through the inverse QFT and sampling) and
+# that it can factor a real toy RSA modulus with zero shortcuts anywhere in the pipeline.
+
+
+@pytest.mark.slow
+def test_gate_level_period_finding_distribution_matches_theory_for_power_of_two_period():
+    # N=15, a=7, r=4, n_count=6 (2^6=64, and 4 | 64 exactly): exact peaks at k*64/4=16*k for
+    # k=0..3. Same exact-peak logic as the permutation-backend test above, smaller n_count.
+    rng = np.random.default_rng(0)
+    n_count = 6
+    shots = 20
+    counts: dict[int, int] = {}
+    for _ in range(shots):
+        result = find_period_quantum_gate_level(7, 15, rng, n_count=n_count)
+        counts[result.measured] = counts.get(result.measured, 0) + 1
+        if result.measured in (16, 48):
+            assert result.period == 4
+        else:
+            assert result.period is None
+    assert set(counts.keys()) <= {0, 16, 32, 48}
+
+
+@pytest.mark.slow
+def test_gate_level_backend_breaks_real_rsa_end_to_end_with_zero_shortcuts():
+    # The same "break real RSA" story as test_shors_algorithm_breaks_real_rsa_end_to_end
+    # below, but with the honest gate-level circuit doing the modular exponentiation instead
+    # of the permutation shortcut — nothing in this path is a documented shortcut.
+    kp = _small_keypair(p=3, q=5, e=3)  # N=15
+    secret = 7
+    ciphertext = encrypt_int(secret, kp.public)
+
+    result = shors_algorithm(
+        kp.public.n,
+        np.random.default_rng(9),
+        max_attempts=15,
+        n_count=6,
+        period_finder=find_period_quantum_gate_level,
+    )
+    assert result.factors is not None
+    assert {result.factors[0], result.factors[1]} == {kp.p, kp.q}
+
+    phi = (kp.p - 1) * (kp.q - 1)
+    recovered_d = mod_inverse(kp.public.e, phi)
+    assert recovered_d == kp.private.d
+    cracked_key = PrivateKey(n=kp.public.n, d=recovered_d)
+    assert decrypt_int(ciphertext, cracked_key) == secret
 
 
 # --- shors_algorithm: classical pre-checks --------------------------------------------------

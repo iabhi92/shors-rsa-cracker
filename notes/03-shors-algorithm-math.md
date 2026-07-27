@@ -1,8 +1,10 @@
 # Shor's algorithm: from factoring to order-finding, and back
 
 Implemented across `quantum/modexp.py` and `quantum/shor.py`. This note covers the math, the
-one deliberate scope boundary in the implementation, and why this specific algorithm — not
-"quantum computers are fast" in general — is what actually threatens RSA.
+modular-exponentiation permutation shortcut and its honest gate-level alternative (the
+construction itself lives in `notes/04-gate-level-modular-exponentiation.md`), and why this
+specific algorithm — not "quantum computers are fast" in general — is what actually
+threatens RSA.
 
 ## Why factoring reduces to order-finding
 
@@ -71,27 +73,33 @@ also be a valid order, which isn't the case here). `tests/test_quantum_shor.py`'
 failure of that specific shot, not a bug — the algorithm's retry loop is what makes the
 overall procedure reliable despite individual shots like this one failing.
 
-## The scope boundary: modular exponentiation as a permutation
+## Modular exponentiation: a fast shortcut, and an honest gate-level alternative
 
 `quantum/modexp.py` implements `|x⟩|y⟩ ↦ |x⟩|y·aˣ mod N⟩` by computing `aˣ mod N` classically
 (once per control-register value `x`, via Python's `pow`) and permuting statevector
 amplitudes accordingly — not by composing it from elementary reversible-arithmetic gates.
 
-This is a real, named scope decision, not an oversight. A physical quantum computer builds
-controlled modular exponentiation from a cascade of controlled modular multipliers, each
-built from reversible adders (e.g. Draper's QFT-based adder) — on the order of `O(n³)`
-elementary two-qubit gates for an n-bit `N`. Simulating *that* circuit gate-by-gate wouldn't
-teach anything different about *why* Shor's algorithm gives a quantum speedup — it would just
-be a much larger, slower way of computing the exact same unitary this project already
-computes directly. The speedup in Shor's algorithm comes from evaluating `aˣ mod N` **for
-every `x` simultaneously**, in superposition, via the controlled-U structure — and then
-reading out the period via the inverse QFT. That structural claim is fully and honestly
-simulated here: real superposition (`H` on every control qubit), a real controlled operation
-(conditioned on the actual control-register value, not faked), a real inverse QFT (verified
-against the exact DFT matrix), and real classical post-processing. The one piece that's a
-direct permutation rather than a gate cascade is the arithmetic itself — a scope boundary
-shared by most Shor's-algorithm teaching implementations (including Qiskit's own textbook
-example), for exactly this reason.
+That was originally a named scope boundary rather than an oversight: a physical quantum
+computer builds controlled modular exponentiation from a cascade of controlled modular
+multipliers, each built from reversible adders — on the order of `O(n³)` elementary
+two-qubit gates for an n-bit `N`. The structural claim that actually matters for *why* Shor's
+algorithm gives a quantum speedup — evaluating `aˣ mod N` for every `x` simultaneously in
+superposition via the controlled-U structure, then reading out the period via the inverse
+QFT — is fully and honestly simulated either way: real superposition, a real controlled
+operation, a real inverse QFT (verified against the exact DFT matrix), real classical
+post-processing. The permutation shortcut only touches the *arithmetic* underneath that
+structure, and it's the scope boundary shared by most Shor's-algorithm teaching
+implementations, including Qiskit's own textbook example.
+
+That boundary has since been crossed anyway: `quantum/modexp_circuit.py` builds the same
+`|x⟩|y⟩ ↦ |x⟩|y·aˣ mod N⟩` operation entirely from elementary single- and multi-controlled
+single-qubit gates — reversible Fourier adders, a modular adder, controlled modular
+multiplication, then exponentiation — with zero classical shortcuts anywhere in the
+arithmetic. See `notes/04-gate-level-modular-exponentiation.md` for the construction and how
+it's verified. Both implementations exist deliberately: the permutation shortcut is cheaper
+(fewer qubits, reaches larger `N`) and remains the default; the gate-level circuit is the
+honest one and is available as `quantum.shor.find_period_quantum_gate_level`, a drop-in
+alternative `period_finder` for `shors_algorithm`.
 
 ## Independent cross-check against Cirq
 

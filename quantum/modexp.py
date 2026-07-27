@@ -21,6 +21,10 @@ classically, once per control value x, and permuting target-register amplitudes 
 rather than re-derived gate by gate. Everything else in the pipeline (superposition creation,
 the controlled structure itself, the inverse QFT, measurement, and the classical
 continued-fractions post-processing in shor.py) is genuine quantum simulation.
+
+See quantum/modexp_circuit.py for the honest gate-level alternative (reversible adders,
+modular multipliers, no shortcuts) that this permutation is cross-validated against, and
+notes/04-gate-level-modular-exponentiation.md for the construction.
 """
 
 import math
@@ -40,7 +44,7 @@ def apply_modular_exponentiation(
     if math.gcd(a, N) != 1:
         raise ValueError(f"a={a} must be coprime with N={N}")
     dim_target = 2**n_target
-    if N > dim_target:
+    if dim_target < N:
         raise ValueError(f"target register of {n_target} qubits (dim {dim_target}) can't hold N={N}")
 
     tensor = register.state.reshape(2**n_control, dim_target)

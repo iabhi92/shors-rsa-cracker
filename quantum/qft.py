@@ -11,7 +11,7 @@ of the sub-register being transformed).
 
 import numpy as np
 
-from quantum.statevector import H, QuantumRegister, phase
+from quantum.statevector import GateSink, H, phase
 
 
 def dft_matrix(n_qubits: int) -> np.ndarray:
@@ -23,7 +23,7 @@ def dft_matrix(n_qubits: int) -> np.ndarray:
     return np.exp(2j * np.pi * exponent / dim) / np.sqrt(dim)
 
 
-def apply_qft(register: QuantumRegister, qubits: list[int]) -> None:
+def apply_qft(register: GateSink, qubits: list[int]) -> None:
     """Apply the QFT circuit to `qubits` (qubits[0] most significant) in place."""
     n = len(qubits)
     for i in range(n):
@@ -37,7 +37,7 @@ def apply_qft(register: QuantumRegister, qubits: list[int]) -> None:
         register.apply_swap(qubits[i], qubits[n - 1 - i])
 
 
-def apply_inverse_qft(register: QuantumRegister, qubits: list[int]) -> None:
+def apply_inverse_qft(register: GateSink, qubits: list[int]) -> None:
     """Apply the inverse QFT: the exact gate-reversal of apply_qft (reverse order,
     negated phase angles, self-inverse H and SWAP)."""
     n = len(qubits)

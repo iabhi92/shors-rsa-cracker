@@ -18,16 +18,16 @@ Attack -> weakness it exploits:
 import math
 import secrets
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable, Optional
 
 
 @dataclass
 class FactorAttemptResult:
     n: int
     method: str
-    factor: Optional[int]
-    other_factor: Optional[int]
+    factor: int | None
+    other_factor: int | None
     operations: int
     elapsed_seconds: float
     succeeded: bool
@@ -53,7 +53,7 @@ def _sieve_primes_up_to(limit: int) -> list[int]:
     return primes
 
 
-def trial_division(n: int, timeout: Optional[float] = None) -> FactorAttemptResult:
+def trial_division(n: int, timeout: float | None = None) -> FactorAttemptResult:
     """Try every odd divisor up to sqrt(n). O(sqrt(n)) time, O(1) space."""
     start = time.perf_counter()
     operations = 0
@@ -77,7 +77,7 @@ def trial_division(n: int, timeout: Optional[float] = None) -> FactorAttemptResu
 
 
 def fermat_factorization(
-    n: int, timeout: Optional[float] = None, max_iterations: Optional[int] = None
+    n: int, timeout: float | None = None, max_iterations: int | None = None
 ) -> FactorAttemptResult:
     """Express n = a^2 - b^2 = (a-b)(a+b). Fast iff p and q are close (|p-q| small)."""
     start = time.perf_counter()
@@ -110,7 +110,7 @@ def fermat_factorization(
 
 
 def pollards_rho(
-    n: int, timeout: Optional[float] = None, max_attempts: int = 100
+    n: int, timeout: float | None = None, max_attempts: int = 100
 ) -> FactorAttemptResult:
     """Floyd-cycle-detection variant of Pollard's rho. Expected O(n^{1/4})."""
     start = time.perf_counter()
@@ -144,7 +144,7 @@ def pollards_rho(
 
 
 def pollards_p_minus_1(
-    n: int, bound: int = 200_000, timeout: Optional[float] = None
+    n: int, bound: int = 200_000, timeout: float | None = None
 ) -> FactorAttemptResult:
     """Succeeds iff (p-1) or (q-1) is B-smooth for B = bound. Fails otherwise, cleanly."""
     start = time.perf_counter()
@@ -183,7 +183,7 @@ ATTACK_METHODS: dict[str, Callable[..., FactorAttemptResult]] = {
 }
 
 
-def attempt_all(n: int, timeout_per_method: Optional[float] = None) -> list[FactorAttemptResult]:
+def attempt_all(n: int, timeout_per_method: float | None = None) -> list[FactorAttemptResult]:
     """Run every classical method in turn, cheapest-first, and record every result.
 
     Stops early only once one method succeeds (a real attacker would too), but always
