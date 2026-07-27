@@ -1,7 +1,7 @@
 // Same-origin '/api' works for local dev (Vite's proxy) and the Docker/nginx setup, where the
 // frontend and backend share an origin. GitHub Pages only serves static files, so the frontend
 // there needs the backend's actual deployed URL, injected at build time.
-const BASE = import.meta.env.VITE_API_BASE_URL ?? '/api'
+export const BASE = import.meta.env.VITE_API_BASE_URL ?? '/api'
 
 export class ApiError extends Error {
   status: number

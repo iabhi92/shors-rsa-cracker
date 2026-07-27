@@ -50,6 +50,20 @@ app.add_middleware(
     allow_credentials=False,
     allow_methods=["GET", "POST"],
     allow_headers=["*"],
+    # Without this, a cross-origin fetch() (GitHub Pages calling this Render-hosted API) can
+    # only read the small CORS-safelisted response headers (Cache-Control, Content-Type, etc.)
+    # via JS -- browsers hide every other header, including the security ones this project
+    # actually sets, unless the server explicitly opts them in here. The Security Dashboard
+    # page's live header self-check needs to read these directly, not just have them present.
+    expose_headers=[
+        "Content-Security-Policy",
+        "X-Content-Type-Options",
+        "X-Frame-Options",
+        "Referrer-Policy",
+        "Permissions-Policy",
+        "Strict-Transport-Security",
+        "Cache-Control",
+    ],
 )
 
 app.middleware("http")(security_headers_middleware)

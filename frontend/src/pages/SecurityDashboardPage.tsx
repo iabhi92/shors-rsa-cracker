@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { CheckCircle2, XCircle } from 'lucide-react'
-import { apiGet } from '../api/client'
+import { apiGet, BASE } from '../api/client'
 import { useFetchOnMount } from '../hooks/useApi'
 import type { ProjectMeta } from '../types/api'
 import { Card, PageHeader, Spinner, StatCard } from '../components/ui'
@@ -18,7 +18,13 @@ const EXPECTED_HEADERS = [
 type HeaderCheck = { entries: [string, string][] }
 
 async function fetchHeaderCheck(): Promise<HeaderCheck> {
-  const res = await fetch('/api/health')
+  // Deliberately a raw fetch, not apiGet -- this page needs the Response object itself to read
+  // headers, not the parsed JSON body. Must still go through the same BASE as every other call
+  // (see api/client.ts): a relative '/api/health' would resolve against the current page's own
+  // origin, which is correct for same-origin deployments (local dev, Docker) but silently wrong
+  // on GitHub Pages, where that path doesn't exist on the static site at all and the browser
+  // would report back on GitHub Pages' own incidental headers instead of the backend's.
+  const res = await fetch(`${BASE}/health`)
   return { entries: [...res.headers.entries()] }
 }
 
