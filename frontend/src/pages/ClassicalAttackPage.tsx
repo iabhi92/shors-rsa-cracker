@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { useSearchParams } from 'react-router'
+import { Link, useSearchParams } from 'react-router'
 import { apiPost } from '../api/client'
 import { useAction } from '../hooks/useApi'
 import type { AttackMethod, CompareResponse } from '../types/api'
@@ -159,7 +159,7 @@ export default function ClassicalAttackPage() {
 
       <p className="mt-6 text-sm text-ink-muted">
         None of these demonstrations scale to real RSA key sizes (2048+ bits) -- see the{' '}
-        <a href="/classical-benchmark" className="text-gold underline underline-offset-2">Classical Benchmark</a>{' '}
+        <Link to="/classical-benchmark" className="text-gold underline underline-offset-2">Classical Benchmark</Link>{' '}
         page for measured evidence of the exponential growth.
       </p>
     </div>

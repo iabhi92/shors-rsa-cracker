@@ -31,7 +31,12 @@ function LazyPage({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   return (
-    <BrowserRouter>
+    // BASE_URL is Vite's own base-path env var, set from vite.config.ts's `base` option --
+    // '/' locally and in the Docker/nginx setup, '/shors-rsa-cracker/' on GitHub Pages, where
+    // the app is served from a subpath rather than the domain root. Without this, every
+    // internal Link/navigate() resolves against '/', which strips the subpath from the URL
+    // entirely on click (landing on the wrong origin-root page instead of a route under it).
+    <BrowserRouter basename={import.meta.env.BASE_URL}>
       <Routes>
         <Route element={<Layout />}>
           <Route index element={<HomePage />} />

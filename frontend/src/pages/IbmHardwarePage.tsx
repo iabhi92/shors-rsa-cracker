@@ -1,3 +1,4 @@
+import { Link } from 'react-router'
 import { apiGet } from '../api/client'
 import { useFetchOnMount } from '../hooks/useApi'
 import type { IbmHardwareResponse } from '../types/api'
@@ -86,9 +87,9 @@ export default function IbmHardwarePage() {
               circuit only works because the order r was known classically in advance for this
               specific tiny N=15 -- computing r classically is exactly as hard as factoring for
               real RSA sizes. See{' '}
-              <a href="/docs/real-hardware-validation" className="text-gold underline underline-offset-2">
+              <Link to="/docs/real-hardware-validation" className="text-gold underline underline-offset-2">
                 the full write-up
-              </a>{' '}
+              </Link>{' '}
               for the complete methodology, including two real bugs caught locally before this
               was ever run on real hardware.
             </p>

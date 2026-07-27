@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router'
 import { Divide, Gauge, ScanEye, Sparkles } from 'lucide-react'
 import { apiPost } from '../api/client'
 import { useAction } from '../hooks/useApi'
@@ -81,7 +82,7 @@ export default function CircuitExplorerPage() {
             <p className="text-xs text-ink-muted">
               These are directly measured by running the real gate-emission code with a counting
               backend (no shortcuts, no estimation) -- not extrapolated. See{' '}
-              <a href="/resource-estimate" className="text-gold underline underline-offset-2">Resource Estimation</a>{' '}
+              <Link to="/resource-estimate" className="text-gold underline underline-offset-2">Resource Estimation</Link>{' '}
               for the closed-form extrapolation used at real RSA bit sizes, where direct measurement is impossible.
             </p>
           </Card>

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router'
 import { BlockMath } from 'react-katex'
 import { apiPost } from '../api/client'
 import { useAction } from '../hooks/useApi'
@@ -88,7 +89,7 @@ export default function QftPage() {
           order <em>r</em> we're trying to find). Applying the inverse QFT to the control
           register concentrates the measurement probability at multiples of{' '}
           <code>2^n_count / r</code> -- try it yourself on the{' '}
-          <a href="/shor" className="text-gold underline underline-offset-2">Shor's Algorithm Lab</a> page.
+          <Link to="/shor" className="text-gold underline underline-offset-2">Shor's Algorithm Lab</Link> page.
         </p>
       </Card>
     </div>

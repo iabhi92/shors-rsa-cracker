@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router'
 import { InlineMath } from 'react-katex'
 import { apiPost } from '../api/client'
 import { useAction } from '../hooks/useApi'
@@ -38,7 +39,7 @@ export default function RsaLabPage() {
         This is <strong>textbook RSA</strong> (no OAEP padding) at an educational key size.
         It's deterministic and malleable by design, so the weaknesses are visible --
         never use output from this page to protect real data. See{' '}
-        <a href="/security" className="underline">Security &amp; Limitations</a>.
+        <Link to="/security" className="underline">Security &amp; Limitations</Link>.
       </WarningBanner>
 
       <Card className="mt-6">
