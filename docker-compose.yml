@@ -1,0 +1,21 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      # The frontend container talks to the backend via the nginx proxy above (not directly
+      # from the browser), so CORS only needs to allow the browser-facing origin here.
+      - CORS_ALLOW_ORIGINS=http://localhost:8080
+    # No IBM credentials are passed here on purpose -- see backend/README.md's
+    # "Configuration" section. This service structurally cannot submit an IBM hardware job.
+
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend

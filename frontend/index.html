@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="From-scratch RSA, classical factoring attacks, a real quantum simulator, and a live IBM quantum hardware run -- an interactive demonstration of why quantum computing breaks RSA."
+    />
+    <meta name="theme-color" content="#070A0F" />
+    <!--
+      The backend's own security_headers.py locks its JSON API down to default-src 'none' --
+      the pages a person actually browses had no equivalent. A meta-tag CSP can't set every
+      directive a real header can (no frame-ancestors, no report-uri), but script-src/style-src/
+      connect-src here are exactly the ones that matter for limiting an XSS payload's blast
+      radius, so this is real defense in depth, not a formality: script-src 'self' means an
+      injected inline <script> or a compromised third-party origin can't execute even if some
+      future XSS bug got a payload onto the page. Every origin listed is one this app genuinely
+      loads from -- Google Fonts (the stylesheet + the font files it references) and 'self' for
+      everything else, including /api, since the frontend calls its own backend same-origin.
+    -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,600;1,500&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400..600&display=swap"
+      rel="stylesheet"
+    />
+    <title>Shor's Algorithm vs. RSA</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <!--
+      Loaded as a plain, unbundled static file rather than imported by app code: this
+      project's build toolchain (Vite 8 / rolldown) corrupts KaTeX's tokenizer regex when it
+      passes through the bundler -- constant-folding katex's piecewise string concatenation of
+      lone UTF-16 surrogate escapes (\uD800-\uDBFF) into a single literal, then emitting that
+      literal as raw (UTF-8-invalid) bytes instead of \u-escaping them, which get silently
+      replaced with U+FFFD on save/serve. The effect: any multi-letter LaTeX command (\bmod,
+      \alpha, \text, ...) renders as a red parse-error glyph followed by leftover plain-text
+      letters, in both dev and the production build. Loading the untouched, unminified-by-us
+      dist file directly (see vite.config.ts's `katex` alias, which points react-katex at
+      `window.katex` instead of a bundled copy) sidesteps the bundler entirely and was verified
+      byte-for-byte to render correctly.
+    -->
+    <script src="/katex.min.js"></script>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
