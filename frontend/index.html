@@ -18,11 +18,16 @@
       injected inline <script> or a compromised third-party origin can't execute even if some
       future XSS bug got a payload onto the page. Every origin listed is one this app genuinely
       loads from -- Google Fonts (the stylesheet + the font files it references) and 'self' for
-      everything else, including /api, since the frontend calls its own backend same-origin.
+      everything else. connect-src also lists the deployed Render backend
+      (https://shors-rsa-cracker.onrender.com) alongside 'self': the Docker/local-dev setup calls
+      the backend same-origin via /api, but the GitHub Pages deployment is static-only and calls
+      a different origin entirely (see render.yaml, api/client.ts's VITE_API_BASE_URL) -- without
+      this, the browser silently blocks every API request as a CSP violation before it's even
+      sent, which looks identical to the backend being down but has nothing to do with it.
     -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data:; connect-src 'self' https://shors-rsa-cracker.onrender.com; object-src 'none'; base-uri 'self'; form-action 'self'"
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
