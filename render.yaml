@@ -1,6 +1,9 @@
+# Deployed manually via Render's "New Web Service" form (not this file's Blueprint auto-detect
+# path), so this is kept as accurate documentation of the actual config rather than a live
+# Blueprint -- live at https://shors-rsa-cracker.onrender.com.
 services:
   - type: web
-    name: shors-rsa-cracker-api
+    name: shors-rsa-cracker
     runtime: python
     plan: free
     rootDir: .
