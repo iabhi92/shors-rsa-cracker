@@ -1,0 +1,67 @@
+name: Deploy frontend to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "frontend/**"
+      - ".github/workflows/deploy-pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build
+        working-directory: frontend
+        # VITE_API_BASE_URL points the static site at the live Render backend (see
+        # render.yaml). VITE_BASE_PATH matches this repo's GitHub Pages project-site path.
+        # Update the Actions variable VITE_API_BASE_URL if the Render service's actual URL
+        # ever differs from the name in render.yaml.
+        env:
+          VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL || 'https://shors-rsa-cracker-api.onrender.com/api' }}
+          VITE_BASE_PATH: /shors-rsa-cracker/
+        run: npm run build
+
+      - name: SPA fallback for client-side routing
+        # GitHub Pages has no server-side rewrite rules, so a deep link (e.g. /rsa-lab)
+        # 404s on refresh unless there's a 404.html to fall back to -- copying index.html
+        # to 404.html lets it load and hand off to React Router client-side.
+        run: cp frontend/dist/index.html frontend/dist/404.html
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: frontend/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

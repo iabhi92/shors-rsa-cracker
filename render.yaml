@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: shors-rsa-cracker-api
+    runtime: python
+    plan: free
+    rootDir: .
+    buildCommand: "pip install -r requirements.txt -r backend/requirements.txt"
+    startCommand: "uvicorn backend.app.main:app --host 0.0.0.0 --port $PORT"
+    envVars:
+      - key: CORS_ALLOW_ORIGINS
+        value: https://iabhi92.github.io
+      - key: PYTHON_VERSION
+        value: 3.12.13
