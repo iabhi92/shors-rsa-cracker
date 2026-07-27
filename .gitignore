@@ -2,6 +2,17 @@
 __pycache__/
 *.pyc
 .pytest_cache/
+.hypothesis/
 .DS_Store
+.mypy_cache/
+.ruff_cache/
 node_modules/
 *.egg-info/
+.env
+
+# IBM Quantum Platform usage-dashboard exports: contain your real name/email/account ID/CRN.
+# Not project data -- if you downloaded these while checking hardware quota, delete them from
+# data/ entirely rather than relying on this ignore rule as the only safeguard.
+data/query.json
+data/usage.csv
+data/usage-by-*.csv
