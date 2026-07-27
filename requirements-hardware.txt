@@ -1,0 +1,7 @@
+-r requirements.txt
+# Only needed for quantum/ibm_hardware.py's actual real-hardware submission path
+# (get_service/run_on_hardware) -- the circuit-construction logic and its tests only need
+# plain `qiskit` (requirements.txt), not these. See .env.example for the credentials these
+# need at runtime.
+qiskit-ibm-runtime>=0.48
+python-dotenv>=1.0
