@@ -1,5 +1,10 @@
 # Shor's Algorithm vs. RSA
 
+[![CI](https://github.com/iabhi92/shors-rsa-cracker/actions/workflows/ci.yml/badge.svg)](https://github.com/iabhi92/shors-rsa-cracker/actions/workflows/ci.yml)
+[![Tests](https://img.shields.io/badge/tests-319%20passing-brightgreen)](data/test_summary.json)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+[![Python 3.12](https://img.shields.io/badge/python-3.12-blue)](requirements.txt)
+
 A hands-on simulator and interactive website demonstrating why quantum computing breaks RSA:
 
 1. RSA implemented from scratch in Python (`rsa/`) — no crypto libraries, so the weak points are visible.
@@ -15,6 +20,22 @@ A hands-on simulator and interactive website demonstrating why quantum computing
 5. `backend/` + `frontend/` — an interactive website: generate a real RSA key, encrypt a message, watch
    classical attacks fail, then run the actual quantum simulation to crack it — every page calls this
    project's real Python code, nothing is mocked. See `WEBSITE_IMPLEMENTATION_PLAN.md` for the architecture.
+
+## Getting started
+
+```bash
+git clone https://github.com/iabhi92/shors-rsa-cracker.git
+cd shors-rsa-cracker
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+python scripts/demo_crack.py   # generates a real RSA key, then breaks it with Shor's algorithm
+```
+
+That's the whole story end to end in one command: a real (small) RSA key gets generated,
+encrypted, and then factored using nothing but the quantum simulator — no shortcuts, no
+pre-computed answer. `pytest` runs the full test suite (319 tests). For the interactive
+website instead of the CLI, jump to [Website](#website) below; for the full setup
+(linting, type-checking, Docker), see [Setup](#setup).
 
 ## Architecture
 
