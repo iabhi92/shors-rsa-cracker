@@ -1,0 +1,69 @@
+[project]
+name = "shors-rsa-cracker"
+version = "0.1.0"
+description = "RSA implemented from scratch, attacked classically, then broken with a from-scratch quantum simulation of Shor's algorithm."
+requires-python = ">=3.12"
+readme = "README.md"
+
+[tool.ruff]
+line-length = 110
+target-version = "py312"
+extend-exclude = [".venv", ".hypothesis", ".pytest_cache"]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "F",   # pyflakes
+    "I",   # import sorting
+    "UP",  # pyupgrade (modern Python idioms)
+    "B",   # bugbear (common real-world bugs)
+    "SIM", # simplification
+    "N",   # naming conventions
+]
+ignore = [
+    "E501", # long lines in docstrings/comments are intentional prose here, not code
+    "N802", # e.g. apply_controlled_multiply_mod_N: N matches the math notation (mod N)
+    "N803", # a, N, e, p, q etc. are the standard RSA/number-theory names used throughout
+    "N806",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["N802"] # pytest fixture/test naming is snake_case by convention already; keep default
+
+[tool.mypy]
+python_version = "3.12"
+# warn_return_any is off: numpy's stubs still widen many array-arithmetic expressions
+# (e.g. ndarray / np.floating) to Any, which would otherwise flag correct numeric code here.
+warn_unused_ignores = true
+warn_redundant_casts = true
+no_implicit_optional = true
+check_untyped_defs = true
+disallow_untyped_defs = true
+exclude = ["^\\.venv/"]
+
+[[tool.mypy.overrides]]
+# Test bodies aren't held to the same annotation/strictness bar as the library code they
+# exercise; check_untyped_defs off here specifically to skip Optional-narrowing noise on
+# result dataclasses (e.g. ShorResult.factors) that tests already assert non-None first.
+module = ["tests.*", "scripts.*", "backend.tests.*"]
+disallow_untyped_defs = false
+check_untyped_defs = false
+
+[[tool.mypy.overrides]]
+module = "cirq.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+# qiskit/qiskit-ibm-runtime ship no py.typed marker / stub package, same situation as cirq
+# above -- not a project code-quality issue, just an upstream typing gap.
+module = ["qiskit.*", "qiskit_ibm_runtime.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+# quantum/cirq_shor.py subclasses cirq.ArithmeticGate the same way Cirq's own Shor's-algorithm
+# tutorial does (registers()/with_registers()/apply() with gate-specific signatures) — Cirq's
+# stubs type the base class generically, so this integration point can't satisfy strict
+# per-parameter annotations and LSP-exact overrides without fighting the library, not this
+# project's own code.
+module = "quantum.cirq_shor"
+disallow_untyped_defs = false
