@@ -42,6 +42,7 @@ function StageRail({
   accentBg,
   accentBorder,
   onSelect,
+  reduceMotion,
 }: {
   stages: PipelineStage[]
   active: number
@@ -49,10 +50,23 @@ function StageRail({
   accentBg: string
   accentBorder: string
   onSelect: (i: number) => void
+  reduceMotion: boolean
 }) {
+  const progress = stages.length > 1 ? active / (stages.length - 1) : 0
   return (
     <div className="relative mb-5 flex items-start gap-1 overflow-x-auto pb-1 sm:gap-2">
       <div className="absolute top-3.5 right-4 left-4 z-0 h-px bg-line" aria-hidden />
+      {/* Fills in behind the stage dots as you advance, instead of a flat track that never
+          changes -- the one piece of the rail that visibly tracks overall progress, not just
+          which single dot is active. */}
+      <motion.div
+        className={`absolute top-3.5 left-4 z-0 h-px ${accentBg}`}
+        style={{ right: '1rem', transformOrigin: 'left center' }}
+        initial={false}
+        animate={{ scaleX: progress, opacity: progress > 0 ? 0.8 : 0 }}
+        transition={{ type: 'spring', stiffness: 120, damping: 20 }}
+        aria-hidden
+      />
       {stages.map((s, i) => (
         <button
           key={s.id}
@@ -62,16 +76,27 @@ function StageRail({
           aria-current={i === active}
           title={s.label}
         >
-          <span
-            className={`relative z-10 flex h-7 w-7 items-center justify-center rounded-full border font-mono text-xs transition-colors ${
-              i === active
-                ? `${accentBorder} ${accentBg} text-navy font-semibold`
-                : i < active
-                  ? 'border-ink-muted/60 bg-navy text-ink-muted'
-                  : 'border-line bg-navy text-ink-muted group-hover:border-ink-muted'
-            }`}
-          >
-            {i + 1}
+          <span className="relative z-10 flex h-7 w-7 items-center justify-center">
+            {i === active && !reduceMotion && (
+              <motion.span
+                className={`absolute inset-0 rounded-full ${accentBg}`}
+                initial={{ opacity: 0.5, scale: 1 }}
+                animate={{ opacity: 0, scale: 1.6 }}
+                transition={{ duration: 1.4, repeat: Infinity, ease: 'easeOut' }}
+                aria-hidden
+              />
+            )}
+            <span
+              className={`relative flex h-7 w-7 items-center justify-center rounded-full border font-mono text-xs transition-colors ${
+                i === active
+                  ? `${accentBorder} ${accentBg} text-navy font-semibold`
+                  : i < active
+                    ? 'border-ink-muted/60 bg-navy text-ink-muted'
+                    : 'border-line bg-navy text-ink-muted group-hover:border-ink-muted'
+              }`}
+            >
+              {i + 1}
+            </span>
           </span>
           <span
             className={`max-w-[6.5rem] text-center font-mono text-[0.65rem] leading-tight ${
@@ -100,6 +125,10 @@ export default function PipelineAnimation({ stages, accent = 'gold' }: { stages:
   const [speedIndex, setSpeedIndex] = useState(DEFAULT_SPEED_INDEX)
   const [progressKey, setProgressKey] = useState(0)
   const [theatre, setTheatre] = useState(false)
+  // Which way the stage transition should slide -- forward (next/autoplay) vs. backward
+  // (previous), so jumping around the pipeline reads as real spatial motion instead of every
+  // stage change looking identical regardless of direction.
+  const [direction, setDirection] = useState(1)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const speed = SPEEDS[speedIndex]
@@ -108,6 +137,7 @@ export default function PipelineAnimation({ stages, accent = 'gold' }: { stages:
   useEffect(() => {
     if (!playing) return
     timerRef.current = setTimeout(() => {
+      setDirection(1)
       setActive((i) => (i + 1) % stages.length)
       setProgressKey((k) => k + 1)
     }, dwellMs)
@@ -118,7 +148,13 @@ export default function PipelineAnimation({ stages, accent = 'gold' }: { stages:
 
   const goTo = (i: number, stopAutoplay = true) => {
     if (stopAutoplay) setPlaying(false)
-    setActive(((i % stages.length) + stages.length) % stages.length)
+    const next = ((i % stages.length) + stages.length) % stages.length
+    // Prefer the short way round for direction: jumping from the last stage to the first (or
+    // vice versa) via next/prev should still read as "forward"/"backward", not a jarring wrap.
+    const forwardDistance = (next - active + stages.length) % stages.length
+    const backwardDistance = (active - next + stages.length) % stages.length
+    setDirection(forwardDistance <= backwardDistance ? 1 : -1)
+    setActive(next)
     setProgressKey((k) => k + 1)
   }
 
@@ -186,6 +222,7 @@ export default function PipelineAnimation({ stages, accent = 'gold' }: { stages:
           accentText={accentText}
           accentBg={accentBg}
           accentBorder={accentBorder}
+          reduceMotion={reduceMotion}
           onSelect={(i) => goTo(i)}
         />
         <div className="flex shrink-0 items-center gap-1.5">
@@ -214,18 +251,19 @@ export default function PipelineAnimation({ stages, accent = 'gold' }: { stages:
           box (e.g. a wide bar register) grows the box instead of getting silently clipped by
           overflow-hidden, which is what used to cut off the top of taller stages. */}
       <div
-        className={`relative flex items-center justify-center overflow-y-auto rounded-sm border border-line bg-navy ${
+        className={`relative flex items-center justify-center overflow-x-hidden overflow-y-auto rounded-sm border border-line bg-navy ${
           fullscreen ? 'my-6 min-h-0 flex-1' : 'min-h-72 sm:min-h-96'
         }`}
       >
         <GridBackdrop />
-        <AnimatePresence mode="wait">
+        <AnimatePresence mode="wait" custom={direction}>
           <motion.div
             key={stage.id}
-            initial={reduceMotion ? undefined : { opacity: 0, scale: 0.97 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={reduceMotion ? undefined : { opacity: 0, scale: 0.97 }}
-            transition={{ duration: 0.35, ease: 'easeOut' }}
+            custom={direction}
+            initial={reduceMotion ? undefined : { opacity: 0, scale: 0.97, x: direction * 28 }}
+            animate={{ opacity: 1, scale: 1, x: 0 }}
+            exit={reduceMotion ? undefined : { opacity: 0, scale: 0.97, x: direction * -28 }}
+            transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
             className="relative z-10 flex w-full items-center justify-center p-4 sm:p-8"
           >
             {stage.render({ active: true, reduceMotion, theatre: fullscreen })}

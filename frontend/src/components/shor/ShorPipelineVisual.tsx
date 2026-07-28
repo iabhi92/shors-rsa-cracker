@@ -115,11 +115,27 @@ function CircuitLegend() {
   )
 }
 
+// Where the "signal" marker sits for each stage -- used to animate a single traveling dot
+// along the control wire rather than just fading gates in and out independently, so the eye
+// has one continuous thing to follow as the active stage changes instead of four unrelated
+// opacity toggles.
+const SIGNAL_X: Record<GateHighlight, number> = { none: 60, h: 92, u: 160, qft: 263, measure: 337 }
+const GATE_COLOR: Record<GateHighlight, string> = { none: '#8c919b', h: '#8065b8', u: '#c99545', qft: '#e3b45e', measure: '#54c89a' }
+
 function CircuitDiagram({ highlight, N, a }: { highlight: GateHighlight; N: number; a: number }) {
   const dim = (on: boolean) => (on ? 1 : 0.28)
   return (
     <div className="flex w-full max-w-lg flex-col items-center gap-2">
     <svg viewBox="0 0 400 100" className="h-20 w-full sm:h-24">
+      <defs>
+        <filter id="gate-glow" x="-75%" y="-75%" width="250%" height="250%">
+          <feGaussianBlur stdDeviation="3.5" result="blur" />
+          <feMerge>
+            <feMergeNode in="blur" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+      </defs>
       <text x="4" y="17" className="font-mono" fontSize="9" fill="#8c919b">control</text>
       <line x1="60" y1="14" x2="400" y2="14" stroke="#8c919b" strokeWidth="1.25" opacity={0.6} />
       <line x1="60" y1="34" x2="400" y2="34" stroke="#8c919b" strokeWidth="1.25" opacity={0.6} />
@@ -127,14 +143,34 @@ function CircuitDiagram({ highlight, N, a }: { highlight: GateHighlight; N: numb
       <text x="4" y="77" className="font-mono" fontSize="9" fill="#8c919b">target</text>
       <line x1="60" y1="74" x2="400" y2="74" stroke="#8c919b" strokeWidth="1.25" opacity={0.6} />
 
+      {/* the traveling signal -- glides smoothly to whichever stage is active, a spring on a
+          single persistent element rather than four gates independently fading */}
+      <motion.circle
+        r="3.2"
+        cy={14}
+        initial={{ cx: SIGNAL_X[highlight], fill: GATE_COLOR[highlight] }}
+        animate={{ cx: SIGNAL_X[highlight], fill: GATE_COLOR[highlight] }}
+        transition={{ type: 'spring', stiffness: 140, damping: 16 }}
+        style={{ filter: 'url(#gate-glow)' }}
+      />
+
       {[14, 34].map((y) => (
-        <motion.g key={y} animate={{ opacity: dim(highlight === 'h') }} transition={{ duration: 0.4 }}>
-          <rect x="82" y={y - 10} width="20" height="20" rx="3" fill="#101722" stroke="#8065b8" strokeWidth="1.5" />
+        <motion.g
+          key={y}
+          animate={{ opacity: dim(highlight === 'h'), scale: highlight === 'h' ? 1.06 : 1 }}
+          style={{ transformOrigin: '92px ' + y + 'px', filter: highlight === 'h' ? 'url(#gate-glow)' : 'none' }}
+          transition={{ duration: 0.4 }}
+        >
+          <rect x={82} y={y - 10} width="20" height="20" rx="3" fill="#101722" stroke="#8065b8" strokeWidth="1.5" />
           <text x="92" y={y + 4} textAnchor="middle" className="font-mono font-semibold" fontSize="11" fill="#8065b8">H</text>
         </motion.g>
       ))}
 
-      <motion.g animate={{ opacity: dim(highlight === 'u') }} transition={{ duration: 0.4 }}>
+      <motion.g
+        animate={{ opacity: dim(highlight === 'u'), scale: highlight === 'u' ? 1.05 : 1 }}
+        style={{ transformOrigin: '160px 38px', filter: highlight === 'u' ? 'url(#gate-glow)' : 'none' }}
+        transition={{ duration: 0.4 }}
+      >
         <line x1="160" y1="14" x2="160" y2="74" stroke="#c99545" strokeWidth="1.5" />
         <circle cx="160" cy="14" r="4" fill="#c99545" />
         <circle cx="160" cy="34" r="4" fill="#c99545" />
@@ -142,12 +178,20 @@ function CircuitDiagram({ highlight, N, a }: { highlight: GateHighlight; N: numb
         <text x="160" y="78" textAnchor="middle" className="font-mono" fontSize="8.5" fill="#c99545">{a}ˣ mod {N}</text>
       </motion.g>
 
-      <motion.g animate={{ opacity: dim(highlight === 'qft') }} transition={{ duration: 0.4 }}>
+      <motion.g
+        animate={{ opacity: dim(highlight === 'qft'), scale: highlight === 'qft' ? 1.05 : 1 }}
+        style={{ transformOrigin: '263px 24px', filter: highlight === 'qft' ? 'url(#gate-glow)' : 'none' }}
+        transition={{ duration: 0.4 }}
+      >
         <rect x="240" y="2" width="46" height="44" rx="3" fill="#101722" stroke="#e3b45e" strokeWidth="1.5" />
         <text x="263" y="28" textAnchor="middle" className="font-mono font-semibold" fontSize="10" fill="#e3b45e">QFT⁻¹</text>
       </motion.g>
 
-      <motion.g animate={{ opacity: dim(highlight === 'measure') }} transition={{ duration: 0.4 }}>
+      <motion.g
+        animate={{ opacity: dim(highlight === 'measure'), scale: highlight === 'measure' ? 1.05 : 1 }}
+        style={{ transformOrigin: '337px 24px', filter: highlight === 'measure' ? 'url(#gate-glow)' : 'none' }}
+        transition={{ duration: 0.4 }}
+      >
         <rect x="320" y="2" width="34" height="44" rx="3" fill="#101722" stroke="#54c89a" strokeWidth="1.5" />
         <path d="M 328 34 A 9 9 0 0 1 346 34" fill="none" stroke="#54c89a" strokeWidth="1.5" />
         <line x1="337" y1="34" x2="344" y2="21" stroke="#54c89a" strokeWidth="1.5" strokeLinecap="round" />
@@ -176,18 +220,29 @@ function BarRow({ math, mode }: { math: ReturnType<typeof useShorMath>; mode: 'f
             <div key={x} className="flex shrink-0 flex-col items-center gap-1.5">
               {/* Always reserve this slot's height, even when empty, so toggling between
                   modes never reflows neighbouring columns or the row's own height. */}
-              <span
+              <motion.span
                 className="font-mono text-[0.65rem] font-semibold leading-none"
                 style={{ color: GROUP_COLORS[math.groupOf(x) % GROUP_COLORS.length], visibility: labelled ? 'visible' : 'hidden' }}
+                initial={false}
+                animate={labelled ? { scale: [0.5, 1.15, 1], opacity: 1 } : { scale: 1, opacity: 1 }}
+                transition={{ duration: 0.4, delay: 0.35 + (x / math.controlValues.length) * 0.3, ease: 'easeOut' }}
               >
                 {(1 / math.peaks.length).toFixed(2)}
-              </span>
+              </motion.span>
               <motion.div
                 className="w-5 rounded-t-sm sm:w-6"
-                style={{ backgroundColor: show ? GROUP_COLORS[math.groupOf(x) % GROUP_COLORS.length] : '#1b2430' }}
+                style={{
+                  backgroundColor: show ? GROUP_COLORS[math.groupOf(x) % GROUP_COLORS.length] : '#1b2430',
+                  boxShadow: isPeak && mode === 'peaked' ? `0 0 12px 1px ${GROUP_COLORS[math.groupOf(x) % GROUP_COLORS.length]}66` : 'none',
+                }}
                 initial={{ height: 8 }}
                 animate={{ height: mode === 'flat' ? 90 : isPeak ? 120 : 8 }}
-                transition={{ duration: 0.45, delay: (x / math.controlValues.length) * 0.3, ease: 'easeInOut' }}
+                transition={{
+                  type: 'spring',
+                  stiffness: 260,
+                  damping: 18,
+                  delay: (x / math.controlValues.length) * 0.3,
+                }}
               />
               <span className="font-mono text-[0.65rem] text-ink-muted">{x}</span>
             </div>

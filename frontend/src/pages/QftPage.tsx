@@ -72,7 +72,11 @@ export default function QftPage() {
             ) : (
               <ErrorBanner message="Did not match the exact DFT matrix -- unexpected, please report this." />
             )}
-            <div className="grid gap-6 sm:grid-cols-2">
+            {/* Stacked, not side-by-side: the amplitude table needs ~560px to show all three
+                columns without truncating, which a two-up layout can't give it on any real
+                screen width (a 2-column split of a ~900px card leaves ~430px each). Full width,
+                one above the other, means the Probability column is never fighting for space. */}
+            <div className="grid gap-6">
               <AmplitudeView title="Before" amplitudes={qft.state.data.before} />
               <AmplitudeView title="After" amplitudes={qft.state.data.after} />
             </div>

@@ -6,7 +6,12 @@ export default function AmplitudeView({ amplitudes, title }: { amplitudes: Ampli
   const chartData = amplitudes.map((a) => ({ state: `|${a.basis_state}⟩`, probability: a.probability }))
 
   return (
-    <div>
+    // min-w-0 overrides the grid/flex-item default of min-width:auto -- without it, a parent
+    // grid (e.g. QftPage's side-by-side Before/After columns) refuses to shrink this column
+    // below the table's own min-w-[560px], so the table overflows the whole page instead of
+    // scrolling inside its own overflow-x-auto wrapper, silently clipping the Probability
+    // column off the right edge instead of making it reachable.
+    <div className="min-w-0">
       {title && <h3 className="mb-2 text-sm font-medium text-ink-muted">{title}</h3>}
       <div className="h-56 w-full">
         <ResponsiveContainer>

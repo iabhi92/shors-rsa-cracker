@@ -192,6 +192,7 @@ function RhoVisual() {
         <motion.circle
           r="3.2"
           fill="#54c89a"
+          initial={{ cx: points[0].x, cy: points[0].y }}
           animate={{
             cx: points.map((p) => p.x).concat(points[0].x),
             cy: points.map((p) => p.y).concat(points[0].y),
@@ -201,6 +202,7 @@ function RhoVisual() {
         <motion.circle
           r="3.2"
           fill="#c99545"
+          initial={{ cx: points[0].x, cy: points[0].y }}
           animate={{
             cx: [points[0], points[2], points[4], points[6], points[8], points[0], points[2]].map((p) => p.x),
             cy: [points[0], points[2], points[4], points[6], points[8], points[0], points[2]].map((p) => p.y),
