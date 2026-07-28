@@ -160,18 +160,28 @@ function CircuitDiagram({ highlight, N, a }: { highlight: GateHighlight; N: numb
 
 function BarRow({ math, mode }: { math: ReturnType<typeof useShorMath>; mode: 'flat' | 'peaked' }) {
   return (
+    // overflow-x-auto (needed so wide bar rows can scroll on narrow screens) forces the browser
+    // to compute overflow-y as 'auto' too, per the CSS spec's overflow-x/y pairing rule -- there's
+    // no way to opt back out of that per-axis. Combined with a hardcoded row height, that silently
+    // clipped the probability label above any bar tall enough to make a column's total height
+    // (label + bar + axis number) exceed the fixed height. The real fix is to not fix the height
+    // at all: let the row size itself to its tallest column, so there's never anything to clip.
     <div className="max-w-full overflow-x-auto px-2">
-      <div className="flex items-end gap-2 sm:gap-3" style={{ height: 150 }}>
+      <div className="flex items-end gap-2 sm:gap-3">
         {math.controlValues.map((x) => {
           const isPeak = math.peaks.includes(x)
           const show = mode === 'flat' || isPeak
+          const labelled = mode === 'peaked' && isPeak
           return (
             <div key={x} className="flex shrink-0 flex-col items-center gap-1.5">
-              {mode === 'peaked' && isPeak && (
-                <span className="font-mono text-[0.65rem] font-semibold" style={{ color: GROUP_COLORS[math.groupOf(x) % GROUP_COLORS.length] }}>
-                  {(1 / math.peaks.length).toFixed(2)}
-                </span>
-              )}
+              {/* Always reserve this slot's height, even when empty, so toggling between
+                  modes never reflows neighbouring columns or the row's own height. */}
+              <span
+                className="font-mono text-[0.65rem] font-semibold leading-none"
+                style={{ color: GROUP_COLORS[math.groupOf(x) % GROUP_COLORS.length], visibility: labelled ? 'visible' : 'hidden' }}
+              >
+                {(1 / math.peaks.length).toFixed(2)}
+              </span>
               <motion.div
                 className="w-5 rounded-t-sm sm:w-6"
                 style={{ backgroundColor: show ? GROUP_COLORS[math.groupOf(x) % GROUP_COLORS.length] : '#1b2430' }}
@@ -195,8 +205,21 @@ function BarRow({ math, mode }: { math: ReturnType<typeof useShorMath>; mode: 'f
  * the inverse QFT rotates the basis does the period become visible as peaks. Flipping the toggle
  * re-runs the same BarRow component in 'flat' mode, so the contrast is the *same* real bars, not
  * a separate illustration. */
-function QftStageVisual({ math, N, a }: { math: ReturnType<typeof useShorMath>; N: number; a: number }) {
-  const [withQft, setWithQft] = useState(true)
+function QftStageVisual({
+  math, N, a, withQft, setWithQft,
+}: {
+  math: ReturnType<typeof useShorMath>
+  N: number
+  a: number
+  // Lifted into ShorPipelineVisual rather than a local useState here: PipelineAnimation's
+  // "Present" full-screen mode unmounts this component and mounts a fresh copy inside a portal
+  // (see its own comment on why -- avoiding an even worse double-mounted-state bug), so any
+  // state that lived in *this* component's own useState would silently reset to its default
+  // every time the toggle opened or closed. Living in the parent, which is never unmounted by
+  // that swap, means the toggle survives entering and leaving Present mode intact.
+  withQft: boolean
+  setWithQft: (v: boolean) => void
+}) {
   return (
     <div className="flex flex-col items-center gap-4">
       <CircuitDiagram highlight={withQft ? 'qft' : 'none'} N={N} a={a} />
@@ -274,6 +297,9 @@ export default function ShorPipelineVisual({
   onAChange: (a: string) => void
 }) {
   const math = useShorMath(N, aInput.trim() === '' ? -1 : Number(aInput))
+  // Lifted up from QftStageVisual so the toggle survives PipelineAnimation's Present-mode
+  // mount/unmount swap -- see QftStageVisual's own comment for why that swap exists.
+  const [withQft, setWithQft] = useState(true)
 
   const stages: PipelineStage[] = useMemo(() => {
     const { a, r, states, amplitude, peaks, measured, canFactor, half, f1, f2 } = math
@@ -341,7 +367,7 @@ export default function ShorPipelineVisual({
           states % r === 0
             ? String.raw`\text{peaks at } x = k\cdot\frac{${states}}{${r}},\quad k = 0,\dots,${r - 1}`
             : String.raw`r=${r}\text{ doesn't divide }${states}\text{ evenly — peaks spread across nearby values}`,
-        render: () => <QftStageVisual math={math} N={N} a={a} />,
+        render: () => <QftStageVisual math={math} N={N} a={a} withQft={withQft} setWithQft={setWithQft} />,
       },
       {
         id: 'measure',
@@ -405,7 +431,7 @@ export default function ShorPipelineVisual({
         ),
       },
     ]
-  }, [N, math])
+  }, [N, math, withQft])
 
   return (
     <div id="shor-controls">

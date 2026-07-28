@@ -15,6 +15,24 @@ const DEFAULT_CIPHER = [8, 26, 13]
 export type RsaKey = { p: number; q: number; n: number; phi: number; e: number; d: number }
 export type RsaCiphertext = { ciphertext: number[]; block_size_bytes: number }
 
+/** m = c^d mod n, computed client-side with BigInt so intermediate squarings never overflow
+ * Number's 2^53 safe-integer limit even though the inputs themselves are plain numbers. This is
+ * the same modular exponentiation rsa/core.py runs server-side -- the point is to actually show
+ * the real recovered value per block, not a "mᵢ" placeholder, since the backend's /rsa/decrypt
+ * response only returns the final decoded string, not each block's intermediate numeric result. */
+function modPow(base: number, exponent: number, modulus: number): number {
+  let b = BigInt(base) % BigInt(modulus)
+  let e = BigInt(exponent)
+  const m = BigInt(modulus)
+  let result = 1n
+  while (e > 0n) {
+    if (e & 1n) result = (result * b) % m
+    b = (b * b) % m
+    e >>= 1n
+  }
+  return Number(result)
+}
+
 function Chip({ value, color, label }: { value: number | string; color: string; label?: string }) {
   return (
     <div className="flex flex-col items-center gap-1">
@@ -224,8 +242,11 @@ export default function RsaFlowVisual({
     const k: RsaKey = realKey ?? DEFAULT_KEY
     const isReal = !!realKey
     const nBlocks = realCiphertext ? realCiphertext.ciphertext.length : DEFAULT_BLOCKS.length
+    // The real m_i per block: computed here, not fetched, since /rsa/decrypt only returns the
+    // final decoded string server-side. This is the actual c^d mod n for each real ciphertext
+    // block, not a placeholder -- matches this project's own "nothing here is faked" standard.
     const blocks: (number | string)[] = realCiphertext
-      ? Array.from({ length: nBlocks }, (_, i) => (isReal ? 'mᵢ' : DEFAULT_BLOCKS[i]))
+      ? realCiphertext.ciphertext.map((c) => modPow(c, k.d, k.n))
       : isReal
         ? []
         : DEFAULT_BLOCKS
