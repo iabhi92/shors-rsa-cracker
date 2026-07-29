@@ -19,7 +19,7 @@ def test_resource_curve_is_monotonically_increasing(client):
     assert points[-1]["bits"] >= 2048  # actually reaches a real RSA-2048-sized point
     # Both qubits and gates should grow monotonically with bits -- the actual "cliff" the
     # Resource Estimation page's chart exists to show, not just asserted in a sentence.
-    for a, b in zip(points, points[1:]):
+    for a, b in zip(points, points[1:], strict=False):
         assert a["total_qubits"] <= b["total_qubits"]
         assert a["toffoli_equivalent_gates"] <= b["toffoli_equivalent_gates"]
 

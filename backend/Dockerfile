@@ -13,7 +13,7 @@ COPY rsa/ rsa/
 COPY attacker/ attacker/
 COPY quantum/ quantum/
 COPY notes/ notes/
-COPY SECURITY.md AI_USAGE.md ./
+COPY SECURITY.md ./
 COPY data/classical_benchmark.csv data/quantum_resource_estimate.csv data/ibm_hardware_run_a7_N15.json data/test_summary.json data/
 COPY backend/ backend/
 

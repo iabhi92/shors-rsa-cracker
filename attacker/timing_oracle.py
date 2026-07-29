@@ -21,6 +21,7 @@ import math
 import statistics
 import time
 from collections.abc import Callable
+from contextlib import suppress
 from dataclasses import dataclass
 
 from rsa.core import _pkcs7_pad, _pkcs7_unpad
@@ -105,20 +106,18 @@ def measure_pkcs7_timing(trials: int, block_size: int = 16) -> TimingComparison:
     valid = _pkcs7_pad(message, block_size)
     pad_len = valid[-1]
 
-    corrupted_length = bytearray(valid)
-    corrupted_length[-1] = 0  # 0 is outside the valid [1, block_size] range -- fails the first guard
-    corrupted_length = bytes(corrupted_length)
+    corrupted_length_bytes = bytearray(valid)
+    corrupted_length_bytes[-1] = 0  # 0 is outside the valid [1, block_size] range -- fails the first guard
+    corrupted_length: bytes = bytes(corrupted_length_bytes)
 
-    corrupted_content = bytearray(valid)
-    corrupted_content[-pad_len] ^= 0xFF  # the *first* byte of the padding run, length byte untouched
-    corrupted_content = bytes(corrupted_content)
+    corrupted_content_bytes = bytearray(valid)
+    corrupted_content_bytes[-pad_len] ^= 0xFF  # the *first* byte of the padding run, length byte untouched
+    corrupted_content: bytes = bytes(corrupted_content_bytes)
 
     def try_unpad(data: bytes) -> Callable[[], None]:
         def call() -> None:
-            try:
+            with suppress(ValueError):
                 _pkcs7_unpad(data, block_size)
-            except ValueError:
-                pass
 
         return call
 
@@ -137,20 +136,18 @@ def measure_oaep_timing(trials: int, k: int = 128) -> TimingComparison:
     actually closes the gap _pkcs7_unpad has."""
     encoded = bytearray(oaep_encode(b"attack at dawn", k, seed=b"\x01" * 32))
 
-    corrupted_leading_byte = bytearray(encoded)
-    corrupted_leading_byte[0] ^= 0xFF
-    corrupted_leading_byte = bytes(corrupted_leading_byte)
+    corrupted_leading_byte_bytes = bytearray(encoded)
+    corrupted_leading_byte_bytes[0] ^= 0xFF
+    corrupted_leading_byte: bytes = bytes(corrupted_leading_byte_bytes)
 
-    corrupted_deep = bytearray(encoded)
-    corrupted_deep[40] ^= 0xFF  # inside masked_db, past the leading byte and masked seed
-    corrupted_deep = bytes(corrupted_deep)
+    corrupted_deep_bytes = bytearray(encoded)
+    corrupted_deep_bytes[40] ^= 0xFF  # inside masked_db, past the leading byte and masked seed
+    corrupted_deep: bytes = bytes(corrupted_deep_bytes)
 
     def try_decode(data: bytes) -> Callable[[], None]:
         def call() -> None:
-            try:
+            with suppress(OaepError):
                 oaep_decode(data, k)
-            except OaepError:
-                pass
 
         return call
 

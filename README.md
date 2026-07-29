@@ -1,7 +1,7 @@
 # Shor's Algorithm vs. RSA
 
 [![CI](https://github.com/iabhi92/shors-rsa-cracker/actions/workflows/ci.yml/badge.svg)](https://github.com/iabhi92/shors-rsa-cracker/actions/workflows/ci.yml)
-[![Tests](https://img.shields.io/badge/tests-319%20passing-brightgreen)](data/test_summary.json)
+[![Tests](https://img.shields.io/badge/tests-378%20passing-brightgreen)](data/test_summary.json)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 [![Python 3.12](https://img.shields.io/badge/python-3.12-blue)](requirements.txt)
 
@@ -33,7 +33,7 @@ python scripts/demo_crack.py   # generates a real RSA key, then breaks it with S
 
 That's the whole story end to end in one command: a real (small) RSA key gets generated,
 encrypted, and then factored using nothing but the quantum simulator — no shortcuts, no
-pre-computed answer. `pytest` runs the full test suite (319 tests). For the interactive
+pre-computed answer. `pytest` runs the full test suite (378 tests). For the interactive
 website instead of the CLI, jump to [Website](#website) below; for the full setup
 (linting, type-checking, Docker), see [Setup](#setup).
 
@@ -55,8 +55,7 @@ flowchart LR
     QTM --> DATA[("data/ -- benchmark CSVs,\nresource estimates,\nIBM hardware results")]
 ```
 
-See `AI_USAGE.md` for a running log of AI-assisted work on this project (per project requirements),
-and `SECURITY.md` for the threat model and this project's known, by-design limitations as a
+See `SECURITY.md` for the threat model and this project's known, by-design limitations as a
 deliberately-insecure educational RSA implementation.
 
 ## Setup
@@ -128,7 +127,7 @@ keys beyond the response that generated them, arbitrary file paths) in `backend/
 
 ## Status
 
-Core is built and tested (319 tests, `pytest`): RSA from scratch, a 4-method classical
+Core is built and tested (378 tests, `pytest`): RSA from scratch, a 4-method classical
 attacker with a measured scaling benchmark, a from-scratch quantum statevector simulator
 (gates, QFT verified against the exact DFT matrix), a full Shor's-algorithm pipeline that
 handles every known real failure mode and breaks a real (toy-sized) RSA key end to end, a
@@ -161,6 +160,4 @@ The written report and presentation deck for this project's assessment are gener
 from this repository's real, current data (test counts, benchmark CSVs, the IBM hardware JSON)
 rather than from memory of earlier numbers.
 
-See `AI_USAGE.md` and commit history for the full build log — it's a dated, session-by-session
-record covering both what the AI assistant contributed and what was Abhinav's own direction,
-decisions, and hands-on work throughout.
+See the commit history for the full build log.

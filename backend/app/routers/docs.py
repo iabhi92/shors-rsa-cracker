@@ -1,11 +1,7 @@
 """Renders this project's own Markdown notes/SECURITY.md inside the site, instead of
 duplicating their content by hand. `slug` is looked up in an explicit whitelist dict below --
 never used to build a filesystem path directly, so path traversal via the API is not a
-possible attack shape here regardless of what a client sends.
-
-AI_USAGE.md is deliberately NOT in this whitelist -- it's a real, honest development record
-kept in the repo for project/grading requirements, not public-facing site content. It stays
-fully readable in the repo; this endpoint (and the site) just doesn't surface it."""
+possible attack shape here regardless of what a client sends."""
 
 from pathlib import Path
 
