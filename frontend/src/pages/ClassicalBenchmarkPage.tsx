@@ -25,30 +25,30 @@ export default function ClassicalBenchmarkPage() {
             <div className="h-80 w-full">
               <ResponsiveContainer>
                 <LineChart data={benchmark.data.rows} margin={{ left: 8, right: 16, top: 8, bottom: 8 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1b2430" />
                   <XAxis
                     dataKey="bits"
-                    stroke="#52525b"
-                    tick={{ fill: '#71717a', fontSize: 12 }}
-                    label={{ value: 'RSA modulus size (bits)', position: 'insideBottom', offset: -6, fill: '#52525b', fontSize: 12 }}
+                    stroke="#8c919b"
+                    tick={{ fill: '#8c919b', fontSize: 12 }}
+                    label={{ value: 'RSA modulus size (bits)', position: 'insideBottom', offset: -6, fill: '#8c919b', fontSize: 12 }}
                   />
                   <YAxis
                     scale="log"
                     domain={['auto', 'auto']}
-                    stroke="#52525b"
-                    tick={{ fill: '#71717a', fontSize: 12 }}
-                    label={{ value: 'time (s, log scale)', angle: -90, position: 'insideLeft', fill: '#52525b', fontSize: 12 }}
+                    stroke="#8c919b"
+                    tick={{ fill: '#8c919b', fontSize: 12 }}
+                    label={{ value: 'time (s, log scale)', angle: -90, position: 'insideLeft', fill: '#8c919b', fontSize: 12 }}
                   />
                   <Tooltip
-                    contentStyle={{ background: '#000', border: '1px solid #3f3f46', borderRadius: 2, fontSize: 12 }}
-                    labelStyle={{ color: '#e4e4e7' }}
+                    contentStyle={{ background: '#0b1018', border: '1px solid #1b2430', borderRadius: 2, fontSize: 12 }}
+                    labelStyle={{ color: '#eee8da' }}
                   />
-                  <Legend wrapperStyle={{ fontSize: 12, color: '#71717a' }} iconType="plainline" />
+                  <Legend wrapperStyle={{ fontSize: 12, color: '#8c919b' }} iconType="plainline" />
                   <Line
                     type="monotone"
                     dataKey="trial_division_seconds"
                     name="trial division"
-                    stroke="#c98500"
+                    stroke="#c99545"
                     strokeWidth={2.5}
                     dot={{ r: 3.5, strokeWidth: 0 }}
                     activeDot={{ r: 5 }}
@@ -57,7 +57,7 @@ export default function ClassicalBenchmarkPage() {
                     type="monotone"
                     dataKey="pollards_rho_seconds"
                     name="Pollard's rho"
-                    stroke="#3987e5"
+                    stroke="#8065b8"
                     strokeWidth={2.5}
                     dot={{ r: 3.5, strokeWidth: 0 }}
                     activeDot={{ r: 5 }}

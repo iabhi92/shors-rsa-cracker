@@ -1,4 +1,6 @@
 
+import math
+
 import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
@@ -66,6 +68,43 @@ def test_trial_division_respects_timeout_on_large_semiprime():
     result = trial_division(n, timeout=0.0)
     assert result.timed_out
     assert not result.succeeded
+
+
+def test_trial_division_without_collect_trace_leaves_trace_none():
+    result = trial_division(2 * 7919)
+    assert result.trace is None
+
+
+def test_trial_division_trace_records_every_real_divisor_tried():
+    # 91 = 7 * 13 -- trial division should try d=3 (91%3=1), d=5 (91%5=1), then d=7 (hit).
+    result = trial_division(91, collect_trace=True)
+    assert result.succeeded
+    assert result.trace is not None
+    divisors_tried = [step.divisor for step in result.trace]
+    assert divisors_tried == [3, 5, 7]
+    assert [step.is_factor for step in result.trace] == [False, False, True]
+    assert result.trace[0].remainder == 91 % 3
+    assert result.trace[1].remainder == 91 % 5
+    assert result.trace[-1].remainder == 0
+    # The trace itself is exactly as long as the real operation count -- not a sample of it.
+    assert len(result.trace) == result.operations
+
+
+def test_trial_division_trace_on_prime_records_every_attempt_and_no_hit():
+    result = trial_division(7919, collect_trace=True)
+    assert not result.succeeded
+    assert result.trace is not None
+    assert len(result.trace) == result.operations
+    assert all(not step.is_factor for step in result.trace)
+
+
+def test_trial_division_trace_bounded_at_max_n():
+    # This project's largest allowed classical-attack n (see backend/app/limits.py) -- confirms
+    # the trace stays small enough to return and replay in full even at the actual ceiling.
+    max_n = 10_000_000
+    result = trial_division(max_n - 1, collect_trace=True)  # 9,999,999 -- odd, no tiny factor
+    assert result.trace is not None
+    assert len(result.trace) <= math.isqrt(max_n) // 2 + 1
 
 
 # --- fermat_factorization ----------------------------------------------------------------

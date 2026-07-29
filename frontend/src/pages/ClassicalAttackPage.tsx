@@ -5,6 +5,7 @@ import { useAction } from '../hooks/useApi'
 import type { AttackMethod, CompareResponse } from '../types/api'
 import { Button, Card, ErrorBanner, PageHeader, Table } from '../components/ui'
 import ClassicalAttackVisual from '../components/classical/ClassicalAttackVisual'
+import TrialDivisionReplay from '../components/classical/TrialDivisionReplay'
 
 const METHOD_INFO: Record<AttackMethod, { label: string; why: string; suggestedN: number }> = {
   trial_division: {
@@ -147,6 +148,8 @@ export default function ClassicalAttackPage() {
           </Table>
         </Card>
       )}
+
+      <TrialDivisionReplay n={n} />
 
       <section className="mt-6 grid gap-3 sm:grid-cols-2">
         {Object.entries(METHOD_INFO).map(([method, info]) => (

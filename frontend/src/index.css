@@ -34,6 +34,15 @@ body,
   height: 100%;
 }
 
+/* Smooth in-page anchor jumps (e.g. HistoryPage's year chips) -- gated on the same media query
+   the rest of the site already respects for JS-driven motion, so a reduced-motion visitor gets
+   an instant jump instead of a forced scroll animation CSS alone doesn't know how to skip. */
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
 body {
   @apply bg-navy font-sans text-ink antialiased;
   /* Paper-grain texture via a tiny repeating SVG noise data URI, not a bitmap asset -- kept

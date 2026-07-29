@@ -1,14 +1,28 @@
-import { useState } from 'react'
-import { apiPost } from '../api/client'
-import { useAction } from '../hooks/useApi'
-import type { ResourceEstimateResponse } from '../types/api'
-import { Button, Card, ErrorBanner, PageHeader, StatCard, WarningBanner } from '../components/ui'
+import { useEffect, useState } from 'react'
+import { apiGet, apiPost } from '../api/client'
+import { useAction, useFetchOnMount } from '../hooks/useApi'
+import type { ResourceCurveResponse, ResourceEstimateResponse } from '../types/api'
+import { Card, ErrorBanner, PageHeader, Spinner, StatCard, WarningBanner } from '../components/ui'
+import DoomsdayClock from '../components/DoomsdayClock'
+import ResourceCurveChart from '../components/ResourceCurveChart'
+import WhatBreaksFirst from '../components/WhatBreaksFirst'
 
 const PRESETS = [128, 512, 1024, 2048]
+// estimate_for_rsa_bits is closed-form (no simulation) -- cheap enough to recompute on every
+// slider tick, but the request itself still shouldn't fire on literally every pixel of drag, so
+// this waits for the slider to actually settle for a moment first.
+const SLIDER_DEBOUNCE_MS = 200
 
 export default function ResourceEstimatePage() {
   const [bits, setBits] = useState(2048)
   const estimate = useAction((bits: number) => apiPost<ResourceEstimateResponse>('/resource-estimate', { bits }))
+  const curve = useFetchOnMount(() => apiGet<ResourceCurveResponse>('/resource-estimate/curve'), [])
+
+  useEffect(() => {
+    const t = setTimeout(() => estimate.run(bits), SLIDER_DEBOUNCE_MS)
+    return () => clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bits])
 
   return (
     <div className="mx-auto max-w-4xl">
@@ -23,34 +37,49 @@ export default function ResourceEstimatePage() {
         vs. extrapolated.
       </WarningBanner>
 
+      <div className="mt-6">
+        <DoomsdayClock />
+      </div>
+
       <Card className="mt-6">
-        <div className="flex flex-wrap items-end gap-4">
+        <div className="flex flex-col gap-3">
           <label className="flex flex-col gap-1 text-sm text-ink-muted">
-            RSA modulus size (bits)
+            RSA modulus size: <span className="font-mono text-ink">{bits} bits</span>
+            <input
+              type="range"
+              min={8}
+              max={4096}
+              step={1}
+              value={bits}
+              onChange={(e) => setBits(Number(e.target.value))}
+              className="accent-gold"
+            />
+          </label>
+          <div className="flex flex-wrap items-center gap-4">
             <input
               type="number"
               min={8}
               max={4096}
               value={bits}
               onChange={(e) => setBits(Number(e.target.value))}
-              className="focus-ring w-32 rounded-sm border border-line bg-navy px-3 py-1.5 text-ink"
+              className="focus-ring w-28 rounded-sm border border-line bg-navy px-3 py-1.5 text-ink"
             />
-          </label>
-          <div className="flex gap-2">
-            {PRESETS.map((p) => (
-              <button
-                key={p}
-                type="button"
-                onClick={() => setBits(p)}
-                className="focus-ring rounded-sm border border-line px-2.5 py-1 text-xs text-ink-muted hover:bg-line"
-              >
-                {p}
-              </button>
-            ))}
+            <div className="flex gap-2">
+              {PRESETS.map((p) => (
+                <button
+                  key={p}
+                  type="button"
+                  onClick={() => setBits(p)}
+                  className={`focus-ring rounded-sm border px-2.5 py-1 text-xs ${
+                    bits === p ? 'border-gold text-gold-warm' : 'border-line text-ink-muted hover:bg-line'
+                  }`}
+                >
+                  {p}
+                </button>
+              ))}
+            </div>
+            {estimate.state.status === 'loading' && <span className="font-mono text-xs text-ink-muted">computing…</span>}
           </div>
-          <Button onClick={() => estimate.run(bits)} disabled={estimate.state.status === 'loading'}>
-            Estimate
-          </Button>
         </div>
         {estimate.state.status === 'error' && <div className="mt-3"><ErrorBanner message={estimate.state.message} /></div>}
       </Card>
@@ -76,6 +105,21 @@ export default function ResourceEstimatePage() {
           </div>
         </div>
       )}
+
+      <WhatBreaksFirst bits={bits} resourceEstimate={estimate.state.status === 'success' ? estimate.state.data : null} />
+
+      <Card className="mt-6">
+        <h2 className="font-medium text-ink">The cliff: how fast this actually grows</h2>
+        <p className="mt-1 text-sm text-ink-muted">
+          Every point below is a real closed-form computation at that bit size, not an interpolation -- the dashed line
+          marks wherever the slider above is currently set.
+        </p>
+        <div className="mt-4">
+          {curve.status === 'loading' && <Spinner label="Computing the curve…" />}
+          {curve.status === 'error' && <ErrorBanner message={curve.message} />}
+          {curve.status === 'success' && <ResourceCurveChart points={curve.data.points} currentBits={bits} />}
+        </div>
+      </Card>
 
       {estimate.state.status === 'success' && (
         <Card className="mt-6">

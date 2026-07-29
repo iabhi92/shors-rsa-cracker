@@ -1,7 +1,115 @@
 import { useMemo, useState } from 'react'
 import { motion } from 'motion/react'
-import { ArrowRight, Lock, Unlock } from 'lucide-react'
+import { ArrowRight, CheckCircle2, Lock, Unlock } from 'lucide-react'
 import PipelineAnimation, { type PipelineStage } from '../PipelineAnimation'
+import CodePanel, { type CodeSnippet } from '../CodePanel'
+import { modPow } from '../../lib/modPow'
+import { playKeygen, playEncrypt, playDecrypt, playTick } from '../../lib/sfx'
+
+const RSA_STAGE_SOUND: Record<string, () => void> = {
+  keygen: playKeygen,
+  blocks: playTick,
+  encrypt: playEncrypt,
+  transit: playTick,
+  decrypt: playDecrypt,
+}
+
+// Copied verbatim from this repository's own rsa/*.py.
+const RSA_SNIPPETS: Record<string, CodeSnippet> = {
+  keygen: {
+    file: 'rsa/keygen.py',
+    startLine: 41,
+    code:
+      'def mod_inverse(a: int, m: int) -> int:\n' +
+      '    """Modular inverse of a mod m via extended Euclidean algorithm."""\n' +
+      '    g, x, _ = extended_gcd(a % m, m)\n' +
+      '    if g != 1:\n' +
+      '        raise ValueError(f"{a} has no inverse mod {m} (gcd = {g})")\n' +
+      '    return x % m',
+    notes: {
+      41: 'This is what derives d from e and φ(N) -- the one step that actually makes a keypair asymmetric.',
+      43: 'extended_gcd(a, m) returns (g, x, y) with a·x + m·y = g; when g=1, x is exactly a\'s inverse mod m.',
+      44: 'a has an inverse mod m only if they\'re coprime (gcd=1) -- this is why e must be coprime with φ(N).',
+      45: 'A non-invertible e would silently break decryption later, so this fails loudly at keygen time instead.',
+      46: 'Extended_gcd\'s x can come back negative; % m folds it back into the correct range [0, m).',
+    },
+  },
+  blocks: {
+    file: 'rsa/core.py',
+    startLine: 72,
+    code:
+      '    block_size = _block_size(public_key.n)\n' +
+      '    padded = _pkcs7_pad(message, block_size)\n' +
+      '    blocks = [padded[i : i + block_size] for i in range(0, len(padded), block_size)]',
+    notes: {
+      72: 'The largest number of bytes guaranteed to encode to an integer strictly less than N.',
+      73: 'PKCS7 padding fills the message out to an exact multiple of block_size before splitting it.',
+      74: 'Plain Python slicing, not a library call -- this is the entire "split into blocks" step.',
+    },
+  },
+  encrypt: {
+    file: 'rsa/core.py',
+    startLine: 27,
+    code:
+      'def encrypt_int(m: int, public_key: PublicKey) -> int:\n' +
+      '    if not (0 <= m < public_key.n):\n' +
+      '        raise ValueError("message integer must satisfy 0 <= m < n")\n' +
+      '    return pow(m, public_key.e, public_key.n)',
+    notes: {
+      27: 'Encrypts one already-chunked integer block at a time -- encrypt_bytes calls this once per block.',
+      28: 'A block that doesn\'t satisfy this can\'t be recovered uniquely by decryption -- checked up front.',
+      30: 'The entire cryptographic operation: c = m^e mod N, computed with Python\'s built-in 3-argument pow.',
+    },
+  },
+  transit: {
+    file: 'rsa/core.py',
+    startLine: 3,
+    code:
+      'WARNING (intentional, for this project): this is "textbook" RSA — plain modular\n' +
+      'exponentiation with no padding scheme (no OAEP). It is deterministic (same plaintext\n' +
+      'block always encrypts to the same ciphertext block) and malleable. Real-world RSA\n' +
+      '(TLS, etc.) always wraps this core operation in padding specifically to defend against\n' +
+      'attacks that don\'t need to touch the math at all. We\'re implementing the bare\n' +
+      'mathematical primitive on purpose, since the point of this project is to attack that\n' +
+      'primitive directly (classically and via a simulated quantum computer) rather than any\n' +
+      'particular padding scheme.',
+  },
+  decrypt: {
+    file: 'rsa/core.py',
+    startLine: 33,
+    code: 'def decrypt_int(c: int, private_key: PrivateKey) -> int:\n    return pow(c, private_key.d, private_key.n)',
+    notes: {
+      33: 'Only the holder of d can run this -- the public key alone has no way to invert encrypt_int.',
+      34: 'c^d mod N recovers m exactly, because ed ≡ 1 (mod φ(N)) by construction during keygen.',
+    },
+  },
+}
+
+/** A small burst of sparks radiating from a point -- the payoff for a real (not the default
+ * illustrative example) message finishing its full round trip. Every other success state on this
+ * site is a static SuccessBanner; the actual climax of the RSA Lab -- your own message coming
+ * back byte-for-byte intact through real encrypt/decrypt code -- deserved more than a banner. */
+function SparkBurst() {
+  const sparks = [0, 60, 120, 180, 240, 300]
+  return (
+    <>
+      {sparks.map((angle) => (
+        <motion.span
+          key={angle}
+          className="absolute top-1/2 left-1/2 h-1 w-1 rounded-full bg-gold"
+          initial={{ x: 0, y: 0, opacity: 1, scale: 1 }}
+          animate={{
+            x: Math.cos((angle * Math.PI) / 180) * 34,
+            y: Math.sin((angle * Math.PI) / 180) * 34,
+            opacity: 0,
+            scale: 0.3,
+          }}
+          transition={{ duration: 0.7, ease: 'easeOut' }}
+        />
+      ))}
+    </>
+  )
+}
 
 /** Default illustrative example (p=3, q=11 -> N=33, phi=20, e=3, d=7 -- verified: 2^3 mod 33 = 8,
  * 8^7 mod 33 = 2) shown before the user has generated anything. The moment a real key exists on
@@ -15,25 +123,7 @@ const DEFAULT_CIPHER = [8, 26, 13]
 export type RsaKey = { p: number; q: number; n: number; phi: number; e: number; d: number }
 export type RsaCiphertext = { ciphertext: number[]; block_size_bytes: number }
 
-/** m = c^d mod n, computed client-side with BigInt so intermediate squarings never overflow
- * Number's 2^53 safe-integer limit even though the inputs themselves are plain numbers. This is
- * the same modular exponentiation rsa/core.py runs server-side -- the point is to actually show
- * the real recovered value per block, not a "mᵢ" placeholder, since the backend's /rsa/decrypt
- * response only returns the final decoded string, not each block's intermediate numeric result. */
-function modPow(base: number, exponent: number, modulus: number): number {
-  let b = BigInt(base) % BigInt(modulus)
-  let e = BigInt(exponent)
-  const m = BigInt(modulus)
-  let result = 1n
-  while (e > 0n) {
-    if (e & 1n) result = (result * b) % m
-    b = (b * b) % m
-    e >>= 1n
-  }
-  return Number(result)
-}
-
-function Chip({ value, color, label }: { value: number | string; color: string; label?: string }) {
+export function Chip({ value, color, label }: { value: number | string; color: string; label?: string }) {
   return (
     <div className="flex flex-col items-center gap-1">
       <div
@@ -164,11 +254,63 @@ function EncryptVisual({ k, blocks, cipher }: { k: RsaKey; blocks: (number | str
 }
 
 const MAX_TRANSIT_DOTS = 6
+// Capped so a long message doesn't render thousands of hex-dump rows -- 8 blocks' worth is
+// already enough to make the "structured bytes vs. noise" contrast visible.
+const MAX_HEX_DUMP_BLOCKS = 8
 
-function TransitVisual({ cipher }: { cipher: number[] }) {
-  const shown = cipher.slice(0, MAX_TRANSIT_DOTS)
+/** Big-endian bytes for one block, fixed at `width` bytes -- this is what actually goes out on
+ * the wire per block (a real block cipher/RSA implementation always emits a fixed-width block,
+ * never a variable-length one that would leak the value's magnitude from its length alone). */
+function blockToBytes(value: number, width: number): number[] {
+  const bytes: number[] = []
+  let v = value
+  for (let i = 0; i < width; i++) {
+    bytes.unshift(v & 0xff)
+    v = Math.floor(v / 256)
+  }
+  return bytes
+}
+
+/** A real hexdump -C-style byte view -- offset, hex bytes in groups of 8, and an ASCII sidebar
+ * (dots for anything outside printable ASCII). Rendered for both sides of the wire so "anyone
+ * watching sees ciphertext, not the original blocks" is something you can actually see byte by
+ * byte, not just take on faith from a sentence. */
+function HexDump({ blocks, byteWidth, label, accent }: { blocks: number[]; byteWidth: number; label: string; accent: string }) {
+  const bytes = blocks.slice(0, MAX_HEX_DUMP_BLOCKS).flatMap((b) => blockToBytes(b, byteWidth))
+  const rows: number[][] = []
+  for (let i = 0; i < bytes.length; i += 16) rows.push(bytes.slice(i, i + 16))
+
   return (
-    <div className="flex flex-col items-center gap-4">
+    <div className="w-full min-w-0">
+      <p className="mb-1.5 font-mono text-[0.65rem] tracking-wide text-ink-muted uppercase">{label}</p>
+      <div className="w-full min-w-0 overflow-x-auto rounded-sm border border-line bg-navy p-3">
+        <div className="min-w-max font-mono text-[0.7rem] leading-relaxed">
+          {rows.map((row, i) => (
+            <div key={i} className="flex gap-4">
+              <span className="text-ink-muted/50">{(i * 16).toString(16).padStart(8, '0')}</span>
+              <span style={{ color: accent }}>
+                {row.map((b) => b.toString(16).padStart(2, '0')).join(' ')}
+                {row.length < 16 && '   '.repeat(16 - row.length)}
+              </span>
+              <span className="text-ink-muted">
+                {row.map((b) => (b >= 0x20 && b <= 0x7e ? String.fromCharCode(b) : '.')).join('')}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function TransitVisual({ cipher, blocks }: { cipher: number[]; blocks: (number | string)[] }) {
+  const [showHex, setShowHex] = useState(false)
+  const shown = cipher.slice(0, MAX_TRANSIT_DOTS)
+  const numericBlocks = blocks.filter((b): b is number => typeof b === 'number')
+  const byteWidth = Math.max(1, Math.ceil(Math.log2(Math.max(...cipher, ...numericBlocks, 1) + 1) / 8))
+
+  return (
+    <div className="flex w-full flex-col items-center gap-4">
       <div className="flex items-center gap-2 font-mono text-xs text-ink-muted">
         <Lock className="h-4 w-4 text-gold" /> sent over an open, public channel
       </div>
@@ -191,6 +333,25 @@ function TransitVisual({ cipher }: { cipher: number[] }) {
       <p className="max-w-xs text-center font-mono text-[0.7rem] text-ink-muted">
         anyone watching the wire sees {cipher.slice(0, 8).join(', ')}{cipher.length > 8 ? ', …' : ''} — not the original blocks
       </p>
+
+      <button
+        type="button"
+        onClick={() => setShowHex((s) => !s)}
+        className="focus-ring rounded-sm border border-line px-3 py-1.5 font-mono text-xs text-ink-muted transition-colors hover:border-gold/50 hover:text-ink"
+      >
+        {showHex ? 'hide hex dump' : 'show hex dump →'}
+      </button>
+
+      {showHex && numericBlocks.length > 0 && (
+        <div className="flex w-full max-w-xl flex-col gap-3">
+          <HexDump blocks={numericBlocks} byteWidth={byteWidth} label="plaintext blocks (never sent)" accent="#8c919b" />
+          <HexDump blocks={cipher} byteWidth={byteWidth} label="ciphertext (what actually crosses the wire)" accent="#c99545" />
+          <p className="text-center font-mono text-[0.65rem] text-ink-muted">
+            same byte width, same layout -- the only difference is that the top block is structured (real message bytes) and
+            the bottom one, without OAEP, is still a deterministic function of it{cipher.length > MAX_HEX_DUMP_BLOCKS ? ` (first ${MAX_HEX_DUMP_BLOCKS} blocks shown)` : ''}.
+          </p>
+        </div>
+      )}
     </div>
   )
 }
@@ -216,14 +377,24 @@ function DecryptVisual({ k, cipher, blocks, plaintext }: { k: RsaKey; cipher: nu
       </div>
       {hidden > 0 && <p className="font-mono text-xs text-ink-muted">+{hidden} more block{hidden === 1 ? '' : 's'} (long message)</p>}
       {plaintext && (
-        <motion.p
+        <motion.div
           initial={{ opacity: 0, y: 6 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.6 }}
-          className="font-mono text-sm font-semibold text-success"
+          className="relative flex flex-col items-center gap-2 rounded-sm border border-success/40 bg-success/10 px-5 py-3"
         >
-          recovered: "{plaintext}"
-        </motion.p>
+          <motion.div
+            className="relative flex h-8 w-8 items-center justify-center rounded-full bg-success/20"
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ delay: 0.75, type: 'spring', stiffness: 400, damping: 15 }}
+          >
+            <CheckCircle2 className="h-5 w-5 text-success" />
+            <SparkBurst />
+          </motion.div>
+          <p className="font-mono text-sm font-semibold text-success">recovered: "{plaintext}"</p>
+          <p className="font-mono text-xs text-ink-muted">byte-for-byte intact -- the full round trip, through the real encrypt/decrypt code above</p>
+        </motion.div>
       )}
     </div>
   )
@@ -238,6 +409,7 @@ export default function RsaFlowVisual({
   realCiphertext?: RsaCiphertext | null
   realPlaintext?: string | null
 }) {
+  const [activeStageIndex, setActiveStageIndex] = useState(0)
   const stages: PipelineStage[] = useMemo(() => {
     const k: RsaKey = realKey ?? DEFAULT_KEY
     const isReal = !!realKey
@@ -296,7 +468,7 @@ export default function RsaFlowVisual({
           waitingForMessage ? (
             <p className="font-mono text-sm text-ink-muted">waiting for you to encrypt a message above…</p>
           ) : (
-            <TransitVisual cipher={cipher} />
+            <TransitVisual cipher={cipher} blocks={blocks} />
           ),
       },
       {
@@ -314,5 +486,20 @@ export default function RsaFlowVisual({
     ]
   }, [realKey, realCiphertext, realPlaintext])
 
-  return <PipelineAnimation stages={stages} accent="gold" />
+  return (
+    <div>
+      <PipelineAnimation
+        stages={stages}
+        accent="gold"
+        onActiveChange={setActiveStageIndex}
+        onStageSound={(id) => RSA_STAGE_SOUND[id]?.()}
+      />
+      <div className="mt-4">
+        <h3 className="mb-2 font-mono text-xs font-semibold tracking-wide text-ink-muted uppercase">
+          The actual code behind this step
+        </h3>
+        <CodePanel stageId={stages[activeStageIndex]?.id ?? 'keygen'} snippets={RSA_SNIPPETS} />
+      </div>
+    </div>
+  )
 }

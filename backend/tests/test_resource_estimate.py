@@ -10,6 +10,20 @@ def test_resource_estimate_at_2048_bits(client):
     assert 0.1 < ratio < 10
 
 
+def test_resource_curve_is_monotonically_increasing(client):
+    r = client.get("/api/resource-estimate/curve")
+    assert r.status_code == 200
+    points = r.json()["points"]
+    assert len(points) >= 10
+    assert points[0]["bits"] < points[-1]["bits"]
+    assert points[-1]["bits"] >= 2048  # actually reaches a real RSA-2048-sized point
+    # Both qubits and gates should grow monotonically with bits -- the actual "cliff" the
+    # Resource Estimation page's chart exists to show, not just asserted in a sentence.
+    for a, b in zip(points, points[1:]):
+        assert a["total_qubits"] <= b["total_qubits"]
+        assert a["toffoli_equivalent_gates"] <= b["toffoli_equivalent_gates"]
+
+
 def test_resource_estimate_rejects_bits_outside_range(client):
     assert client.post("/api/resource-estimate", json={"bits": 1}).status_code == 422
     assert client.post("/api/resource-estimate", json={"bits": 10_000_000}).status_code == 422

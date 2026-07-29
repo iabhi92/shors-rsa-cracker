@@ -4,7 +4,7 @@ import { ArrowRight } from 'lucide-react'
 
 export function BenchmarkSketch() {
   return (
-    <svg viewBox="0 0 64 40" className="h-10 w-16" aria-hidden="true">
+    <svg viewBox="0 0 64 40" className="h-full w-full" aria-hidden="true">
       <polyline points="2,34 14,30 24,22 34,24 44,10 54,14 62,2" fill="none" stroke="#c99545" strokeWidth="1.5" strokeLinejoin="round" />
       <line x1="2" y1="36" x2="62" y2="36" stroke="#8c919b" strokeWidth="1" opacity="0.4" />
     </svg>
@@ -13,7 +13,7 @@ export function BenchmarkSketch() {
 
 export function OrbitSketch() {
   return (
-    <svg viewBox="0 0 64 40" className="h-10 w-16" aria-hidden="true">
+    <svg viewBox="0 0 64 40" className="h-full w-full" aria-hidden="true">
       <ellipse cx="32" cy="20" rx="28" ry="12" fill="none" stroke="#8065b8" strokeWidth="1.5" />
       <ellipse cx="32" cy="20" rx="14" ry="16" fill="none" stroke="#c99545" strokeWidth="1.25" opacity="0.7" />
       <circle cx="60" cy="20" r="2" fill="#e3b45e" />
@@ -23,7 +23,7 @@ export function OrbitSketch() {
 
 export function WaveSketch() {
   return (
-    <svg viewBox="0 0 64 40" className="h-10 w-16" aria-hidden="true">
+    <svg viewBox="0 0 64 40" className="h-full w-full" aria-hidden="true">
       <path d="M 2 24 Q 8 12, 14 24 T 26 24" fill="none" stroke="#8065b8" strokeWidth="1.25" opacity="0.7" />
       <path d="M 26 24 Q 30 6, 34 30 Q 38 6, 42 30 Q 46 8, 50 26 Q 54 14, 58 24 L 62 22" fill="none" stroke="#c99545" strokeWidth="1.5" />
     </svg>
@@ -32,7 +32,7 @@ export function WaveSketch() {
 
 export function CircuitSketch() {
   return (
-    <svg viewBox="0 0 64 40" className="h-10 w-16" aria-hidden="true">
+    <svg viewBox="0 0 64 40" className="h-full w-full" aria-hidden="true">
       <line x1="2" y1="10" x2="62" y2="10" stroke="#8c919b" strokeWidth="1" opacity="0.6" />
       <line x1="2" y1="22" x2="62" y2="22" stroke="#8c919b" strokeWidth="1" opacity="0.6" />
       <line x1="2" y1="34" x2="62" y2="34" stroke="#8c919b" strokeWidth="1" opacity="0.6" />
@@ -51,6 +51,7 @@ export function EditorialModuleCard({
   description,
   cta,
   sketch,
+  accent = '#c99545',
 }: {
   to: string
   number: string
@@ -58,24 +59,56 @@ export function EditorialModuleCard({
   description: string
   cta: string
   sketch: ReactNode
+  /** Each module gets its own accent -- the top rule, the hover border, and the corner glow
+   * behind its sketch -- instead of every card defaulting to the same gold regardless of
+   * subject, so "Start here" reads as four distinct doors rather than one card repeated four
+   * times with different words in it. */
+  accent?: string
 }) {
   return (
     <Link
       to={to}
-      className="focus-ring group flex h-full flex-col justify-between rounded-sm border border-line bg-surface p-5 transition-all duration-200 hover:-translate-y-1 hover:border-gold/40"
+      className="group relative flex h-full flex-col overflow-hidden rounded-sm border border-line bg-surface transition-all duration-200 hover:-translate-y-1"
     >
-      <div className="flex items-start justify-between gap-4">
+      {/* an accent-colored ring that fades in on hover, layered over the neutral base border --
+          avoids reaching for JS mouse handlers just to swap one CSS color on :hover. */}
+      <div
+        className="pointer-events-none absolute inset-0 rounded-sm border opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+        style={{ borderColor: accent }}
+        aria-hidden
+      />
+
+      <div className="h-0.75 w-full shrink-0" style={{ backgroundColor: accent }} aria-hidden />
+
+      {/* a soft glow seated behind the sketch, in the module's own accent -- turns the empty
+          space a short description would otherwise leave into part of the composition instead
+          of dead air between the copy and the CTA. */}
+      <div
+        className="pointer-events-none absolute top-8 right-0 h-40 w-40 rounded-full opacity-20 blur-2xl transition-opacity duration-300 group-hover:opacity-35"
+        style={{ backgroundColor: accent }}
+        aria-hidden
+      />
+
+      <div className="flex flex-1 flex-col justify-between p-5">
         <div>
-          <span className="font-mono text-xs text-gold">{number}</span>
-          <h3 className="mt-1 font-display text-lg tracking-wide text-ink uppercase">{title}</h3>
+          <span className="font-mono text-sm font-semibold tracking-wide" style={{ color: accent }}>
+            {number}
+          </span>
+          <h3 className="mt-1.5 font-display text-lg tracking-wide text-ink uppercase">{title}</h3>
           <p className="mt-1.5 max-w-sm font-sans text-sm text-ink-muted">{description}</p>
         </div>
-        <div className="shrink-0 opacity-80 transition-opacity group-hover:opacity-100">{sketch}</div>
+
+        <div className="my-3 flex flex-1 items-center justify-end">
+          <div className="h-16 w-28 opacity-75 transition-all duration-300 group-hover:scale-110 group-hover:opacity-100 sm:h-20 sm:w-32">
+            {sketch}
+          </div>
+        </div>
+
+        <span className="relative inline-flex items-center gap-1.5 font-mono text-xs font-medium" style={{ color: accent }}>
+          {cta}
+          <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+        </span>
       </div>
-      <span className="mt-4 inline-flex items-center gap-1.5 font-mono text-xs font-medium text-gold-warm">
-        {cta}
-        <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
-      </span>
     </Link>
   )
 }

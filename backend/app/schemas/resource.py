@@ -7,6 +7,18 @@ class ResourceEstimateRequest(BaseModel):
     bits: int = Field(..., ge=RESOURCE_ESTIMATE_MIN_BITS, le=RESOURCE_ESTIMATE_MAX_BITS)
 
 
+class ResourceCurvePoint(BaseModel):
+    bits: int
+    total_qubits: int
+    toffoli_equivalent_gates: float
+    ge_logical_qubits: float
+    ge_toffoli_gates: float
+
+
+class ResourceCurveResponse(BaseModel):
+    points: list[ResourceCurvePoint]
+
+
 class ResourceEstimateResponse(BaseModel):
     bits: int
     this_project: dict

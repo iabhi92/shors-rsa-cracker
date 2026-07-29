@@ -3,9 +3,17 @@ import { motion, useReducedMotion } from 'motion/react'
 import { ArrowRight } from 'lucide-react'
 import TerminalDemo from '../TerminalDemo'
 import HarbourBridgeIllustration from './HarbourBridgeIllustration'
+import HarbourBridgeIncident from './HarbourBridgeIncident'
 import HarbourWaveLayer from './HarbourWaveLayer'
 import QuantumOrbitLayer from './QuantumOrbitLayer'
 import QuantumWavefunctionLayer from './QuantumWavefunctionLayer'
+import { useBridgeIncidentPhase } from '../../hooks/useApi'
+
+const INCIDENT_CAPTION: Record<string, string> = {
+  havoc: "A self-driving car has lost control on the bridge -- the backend is waking up (free-tier hosting naps after ~15 idle minutes). Retrying automatically.",
+  quake: 'The deck splits open beneath it and the whole bridge trembles...',
+  connected: 'Backend connected -- Houdini finally got through, and a very patient alien is relaying a signal from someone currently invisible to the one who can actually see it arrive.',
+}
 
 const titleReveal = {
   hidden: { opacity: 0, y: 22 },
@@ -19,6 +27,7 @@ const titleReveal = {
  * nothing about its data is faked for the redesign. */
 export default function SydneyHarbourHero() {
   const reduceMotion = useReducedMotion()
+  const incidentPhase = useBridgeIncidentPhase()
 
   return (
     <section
@@ -32,8 +41,19 @@ export default function SydneyHarbourHero() {
       <div className="pointer-events-none absolute inset-x-0 top-0 h-28 opacity-60 sm:h-36">
         <QuantumOrbitLayer />
       </div>
-      <div className="pointer-events-none absolute inset-x-0 bottom-14 h-40 opacity-90 sm:bottom-16 sm:h-56">
-        <HarbourBridgeIllustration />
+      <div className="pointer-events-none absolute inset-x-0 bottom-14 h-52 opacity-90 sm:bottom-16 sm:h-72">
+        <motion.div
+          className="relative h-full w-full"
+          animate={
+            incidentPhase === 'quake' && !reduceMotion
+              ? { x: [0, -10, 12, -8, 9, -5, 0], y: [0, 6, -5, 6, -3, 2, 0] }
+              : { x: 0, y: 0 }
+          }
+          transition={{ duration: 0.6, repeat: incidentPhase === 'quake' && !reduceMotion ? 1 : 0 }}
+        >
+          <HarbourBridgeIllustration />
+          <HarbourBridgeIncident phase={incidentPhase} />
+        </motion.div>
       </div>
       <div className="pointer-events-none absolute inset-x-0 bottom-8 h-20 opacity-80 sm:bottom-10 sm:h-24">
         <QuantumWavefunctionLayer />
@@ -49,12 +69,12 @@ export default function SydneyHarbourHero() {
         <span className="absolute top-2 left-[4%]">N = p × q</span>
         <span className="absolute top-8 right-[6%]">a<sup>r</sup> &equiv; 1 mod N</span>
       </div>
-      <div className="pointer-events-none absolute inset-x-0 bottom-38 hidden h-10 font-mono text-[0.7rem] text-ink-muted/70 sm:bottom-54 lg:block" aria-hidden="true">
+      <div className="pointer-events-none absolute inset-x-0 bottom-38 hidden h-10 font-mono text-[0.7rem] text-ink-muted/70 sm:bottom-96 lg:block" aria-hidden="true">
         <span className="absolute right-[10%]">gcd(a<sup>r/2</sup> &plusmn; 1, N)</span>
         <span className="absolute left-[46%]">QFT&#8315;&#185;</span>
       </div>
 
-      <div className="relative z-10 mx-auto grid max-w-6xl items-start gap-10 pt-4 pb-64 lg:grid-cols-[1.1fr_1fr] lg:gap-14 sm:pb-72">
+      <div className="relative z-10 mx-auto grid max-w-6xl items-start gap-10 pt-4 pb-72 lg:grid-cols-[1.1fr_1fr] lg:gap-14 sm:pb-96">
         <motion.div initial="hidden" animate="show" variants={titleReveal} transition={{ duration: 0.6 }}>
           <p className="mb-3 font-mono text-xs font-medium tracking-[0.2em] text-gold uppercase">
             Educational security &amp; quantum computing demo
@@ -104,6 +124,15 @@ export default function SydneyHarbourHero() {
               <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
             </Link>
           </div>
+          <motion.p
+            key={incidentPhase}
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+            className="mt-4 max-w-md font-mono text-xs text-ink-muted"
+          >
+            <span className="text-gold-warm">{'>'}</span> {INCIDENT_CAPTION[incidentPhase]}
+          </motion.p>
         </motion.div>
 
         <motion.div

@@ -1,15 +1,16 @@
 import type { ButtonHTMLAttributes, HTMLAttributes, ReactNode } from 'react'
-import { useEffect, useRef, useState } from 'react'
-import { motion, useInView, animate } from 'motion/react'
+import { useEffect, useState } from 'react'
+import { motion, animate } from 'motion/react'
 import { AlertTriangle, CheckCircle2, Loader2, XCircle } from 'lucide-react'
 import DecryptText from './DecryptText'
+import { DURATION, EASE_SIGNATURE } from '../lib/motion'
 
 export function PageHeader({ title, description, eyebrow }: { title: string; description?: ReactNode; eyebrow?: string }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3 }}
+      transition={{ duration: DURATION.fast, ease: EASE_SIGNATURE }}
       className="mb-8"
     >
       {eyebrow && (
@@ -122,35 +123,58 @@ export function Spinner({ label = 'loading...' }: { label?: string }) {
   )
 }
 
-/** Animates from 0 to `value` once it scrolls into view. Falls back to a plain render for
- * non-finite/non-numeric values (e.g. StatCard's "Yes"/"No" hardware-validated flag). */
+/** Animates from 0 to `value` on mount / whenever `value` changes. Falls back to a plain
+ * render for non-finite/non-numeric values (e.g. StatCard's "Yes"/"No" hardware-validated flag).
+ *
+ * Previously gated behind `useInView(..., { once: true, margin: '-10% 0px' })` so the count-up
+ * only played once scrolled into view -- fine for the homepage's passive stats section, but a
+ * real bug everywhere else this component is used (Circuit Explorer, Resource Estimate, IBM
+ * Hardware, Classical Benchmark): those numbers appear as the *result of a button click*, not a
+ * scroll reveal, and whenever the result grid landed with its second row just outside that
+ * shrunk margin (verified: literally any StatCard below roughly the top/bottom 10% of the
+ * viewport at the moment its data arrives), `once: true` meant it never got a second chance --
+ * stuck at 0 permanently, even after manually scrolling directly to it. That's not a decorative
+ * miss like the homepage's train/car, it's the actual data the user just asked for rendering as
+ * a wrong number. Same fix as that homepage bug: drop the scroll-gating, always animate. */
 function AnimatedNumber({ value }: { value: number }) {
-  const ref = useRef<HTMLSpanElement>(null)
-  const inView = useInView(ref, { once: true, margin: '-10% 0px' })
   const [display, setDisplay] = useState(0)
 
   useEffect(() => {
-    if (!inView) return
     const controls = animate(0, value, {
       duration: 1,
       ease: 'easeOut',
       onUpdate: (v) => setDisplay(Math.round(v)),
     })
     return () => controls.stop()
-  }, [inView, value])
+  }, [value])
 
-  return <span ref={ref}>{display.toLocaleString()}</span>
+  return <span>{display.toLocaleString()}</span>
 }
 
 export function StatCard({ label, value, hint }: { label: string; value: ReactNode; hint?: string }) {
   const isPlainFiniteNumber = typeof value === 'number' && Number.isFinite(value)
+  // The flex-column layout lives on this inner div, not on Card's own className: Card renders
+  // {children} inside its own `p-5` wrapper, so a className passed to Card never reaches these
+  // spans -- passing `flex flex-col gap-1` as Card's className (the previous version) only ever
+  // styled Card's outer shell, leaving label/value/hint as plain inline content. That was
+  // invisible at most widths (inline spans plus a numeric value usually wrap acceptably by
+  // accident) but broke for real on an actual mobile screen: the "Real hardware validated" card's
+  // "ibm_marrakesh" hint -- one unbreakable word -- ran directly into "Yes" on the same line and
+  // overflowed straight past the card's border.
   return (
-    <Card interactive className="flex flex-col gap-1">
-      <span className="font-mono text-xs tracking-wide text-ink-muted uppercase">{label}</span>
-      <span className="font-mono text-2xl text-gold-warm">
-        {isPlainFiniteNumber ? <AnimatedNumber value={value as number} /> : value}
-      </span>
-      {hint && <span className="font-mono text-xs text-ink-muted">{hint}</span>}
+    // min-w-0 on the grid/flex item itself, not just the text inside it: a grid cell defaults
+    // to min-width:auto, which refuses to shrink below an unbroken token's intrinsic width no
+    // matter what wrapping the text itself allows -- this is exactly what let a long gate count
+    // (e.g. "103,137,935,360") push straight past this card's own border instead of wrapping,
+    // the same min-w-0 fix AmplitudeView.tsx already needed for its own table column.
+    <Card interactive className="h-full min-w-0">
+      <div className="flex h-full min-w-0 flex-col gap-1">
+        <span className="font-mono text-xs tracking-wide text-ink-muted uppercase">{label}</span>
+        <span className="font-mono text-2xl wrap-break-word text-gold-warm">
+          {isPlainFiniteNumber ? <AnimatedNumber value={value as number} /> : value}
+        </span>
+        {hint && <span className="font-mono text-xs wrap-break-word text-ink-muted">{hint}</span>}
+      </div>
     </Card>
   )
 }

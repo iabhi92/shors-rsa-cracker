@@ -1,12 +1,54 @@
+import { useEffect } from 'react'
 import { Link } from 'react-router'
 import { apiGet } from '../api/client'
 import { useFetchOnMount } from '../hooks/useApi'
 import type { IbmHardwareResponse } from '../types/api'
 import { Card, ErrorBanner, PageHeader, Spinner, StatCard, WarningBanner } from '../components/ui'
 import AmplitudeView from '../components/AmplitudeView'
+import NoiseOverlayChart from '../components/NoiseOverlayChart'
+import CodePanel, { type CodeSnippet } from '../components/CodePanel'
+import { playIbmBlip } from '../lib/sfx'
+
+// Copied verbatim from this repository's own quantum/ibm_hardware.py -- the exact module that
+// submitted the run(s) shown above, not a simplified retelling of it.
+const IBM_RUN_SNIPPETS: Record<string, CodeSnippet> = {
+  run: {
+    file: 'quantum/ibm_hardware.py',
+    startLine: 148,
+    code:
+      'def get_service() -> "QiskitRuntimeService":\n' +
+      '    """Load qiskit-ibm-runtime credentials from the environment (IBM_QUANTUM_API_KEY,\n' +
+      '    IBM_QUANTUM_CRN) -- see .env.example. Never hardcode credentials; .env is git-ignored."""\n' +
+      '    from dotenv import load_dotenv\n' +
+      '    from qiskit_ibm_runtime import QiskitRuntimeService\n' +
+      '\n' +
+      '    load_dotenv()\n' +
+      '    api_key = os.environ.get("IBM_QUANTUM_API_KEY")\n' +
+      '    crn = os.environ.get("IBM_QUANTUM_CRN")\n' +
+      '    if not api_key or not crn:\n' +
+      '        raise RuntimeError(\n' +
+      '            "IBM_QUANTUM_API_KEY and IBM_QUANTUM_CRN must be set (see .env.example) "\n' +
+      '            "before running anything against real hardware"\n' +
+      '        )\n' +
+      '    return QiskitRuntimeService(channel="ibm_cloud", token=api_key, instance=crn)',
+    notes: {
+      148: 'The only function in the whole codebase that ever touches IBM credentials -- see the note below.',
+      152: 'Imported here, not at module load -- so nothing else that imports this file needs qiskit installed.',
+      157: 'Read straight from environment variables -- never a hardcoded string, never checked into git.',
+      160: 'Fails loudly with a clear message rather than letting a missing credential surface as a cryptic SDK error.',
+      165: 'The actual handle to IBM Quantum -- everything past this line is real Qiskit, not this project\'s code.',
+    },
+  },
+}
 
 export default function IbmHardwarePage() {
   const results = useFetchOnMount(() => apiGet<IbmHardwareResponse>('/ibm-hardware/results'), [])
+
+  // The one place this specific effect is allowed to fire at all -- a cold, electronic blip
+  // standing in for real control-hardware chatter, only ever heard here (see lib/sfx.ts).
+  useEffect(() => {
+    if (results.status === 'success') playIbmBlip()
+  }, [results.status])
 
   return (
     <div className="mx-auto max-w-4xl">
@@ -55,7 +97,11 @@ export default function IbmHardwarePage() {
                   <StatCard label="Counting qubits" value={run.n_count} />
                 </div>
 
-                <div className="mt-4 grid gap-6 sm:grid-cols-2">
+                <div className="mt-4">
+                  <NoiseOverlayChart run={run} />
+                </div>
+
+                <div className="mt-6 grid gap-6 sm:grid-cols-2">
                   <AmplitudeView title="Theoretical prediction" amplitudes={theoryAmplitudes} />
                   <AmplitudeView title={`Real hardware (${run.backend_name})`} amplitudes={amplitudes} />
                 </div>
@@ -92,6 +138,49 @@ export default function IbmHardwarePage() {
               </Link>{' '}
               for the complete methodology, including two real bugs caught locally before this
               was ever run on real hardware.
+            </p>
+          </Card>
+
+          <Card className="mt-6">
+            <h2 className="font-medium text-ink">Run this yourself, on your own IBM Quantum account</h2>
+            <p className="mt-2 text-sm text-ink-muted">
+              IBM Quantum's free plan includes real hardware time -- the run(s) shown above weren't submitted from
+              anything special. Three things, in order:
+            </p>
+            <ol className="mt-2 list-inside list-decimal space-y-1 text-sm text-ink-muted">
+              <li>
+                Create a free account at{' '}
+                <a
+                  href="https://quantum.ibm.com"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-gold underline underline-offset-2 hover:text-gold-warm"
+                >
+                  quantum.ibm.com
+                </a>{' '}
+                and copy your API key and instance CRN from the dashboard.
+              </li>
+              <li>
+                <code className="rounded bg-line px-1 py-0.5 text-ink-muted">pip install qiskit qiskit-ibm-runtime python-dotenv</code>, and
+                put those two values in a <code className="rounded bg-line px-1 py-0.5 text-ink-muted">.env</code> file as{' '}
+                <code className="rounded bg-line px-1 py-0.5 text-ink-muted">IBM_QUANTUM_API_KEY</code> /{' '}
+                <code className="rounded bg-line px-1 py-0.5 text-ink-muted">IBM_QUANTUM_CRN</code> (see this repo's{' '}
+                <code className="rounded bg-line px-1 py-0.5 text-ink-muted">.env.example</code>).
+              </li>
+              <li>
+                Call <code className="rounded bg-line px-1 py-0.5 text-ink-muted">run_on_hardware(a=7, N=15, n_count=3)</code> from{' '}
+                <code className="rounded bg-line px-1 py-0.5 text-ink-muted">quantum/ibm_hardware.py</code> -- it builds the exact compiled
+                circuit described above, transpiles it for whichever backend you pick (or the least-busy one, by default), and submits
+                it via Qiskit's SamplerV2 primitive.
+              </li>
+            </ol>
+            <div className="mt-4">
+              <CodePanel stageId="run" snippets={IBM_RUN_SNIPPETS} />
+            </div>
+            <p className="mt-3 text-xs text-ink-muted">
+              This is the only place in the entire codebase that imports qiskit_ibm_runtime or reads these credentials -- see
+              backend/app/routers/ibm.py's own module docstring for the structural guarantee that this website's backend can never
+              submit a job itself.
             </p>
           </Card>
         </>

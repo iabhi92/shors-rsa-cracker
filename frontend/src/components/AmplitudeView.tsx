@@ -16,11 +16,11 @@ export default function AmplitudeView({ amplitudes, title }: { amplitudes: Ampli
       <div className="h-56 w-full">
         <ResponsiveContainer>
           <BarChart data={chartData} margin={{ left: 0, right: 8, top: 8, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
-            <XAxis dataKey="state" stroke="#71717a" fontSize={12} />
-            <YAxis stroke="#71717a" fontSize={12} domain={[0, 1]} />
+            <CartesianGrid strokeDasharray="3 3" stroke="#1b2430" />
+            <XAxis dataKey="state" stroke="#8c919b" fontSize={12} />
+            <YAxis stroke="#8c919b" fontSize={12} domain={[0, 1]} />
             <Tooltip
-              contentStyle={{ background: '#000', border: '1px solid #3f3f46', fontSize: 12 }}
+              contentStyle={{ background: '#0b1018', border: '1px solid #1b2430', fontSize: 12 }}
               formatter={(v) => (typeof v === 'number' ? v.toFixed(4) : v)}
             />
             <Bar dataKey="probability" fill="#c99545" radius={[1, 1, 0, 0]} />

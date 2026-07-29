@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { motion, useReducedMotion, AnimatePresence } from 'motion/react'
 import { BlockMath } from 'react-katex'
 import { Pause, Play, ChevronLeft, ChevronRight, Maximize2, X, Gauge } from 'lucide-react'
+import { DURATION, EASE_SIGNATURE } from '../lib/motion'
 
 export type PipelineStage = {
   id: string
@@ -118,7 +119,24 @@ function StageRail({
  * panel full-screen for a projector. Arrow keys step through stages once the panel has focus (or
  * always, while in presentation mode); Escape exits presentation mode. `prefers-reduced-motion`
  * disables autoplay and freezes each stage's visual on its resting frame. */
-export default function PipelineAnimation({ stages, accent = 'gold' }: { stages: PipelineStage[]; accent?: 'gold' | 'violet' }) {
+export default function PipelineAnimation({
+  stages,
+  accent = 'gold',
+  onActiveChange,
+  onStageSound,
+}: {
+  stages: PipelineStage[]
+  accent?: 'gold' | 'violet'
+  /** Fired whenever the active stage index changes (autoplay or manual) -- lets a parent sync
+   * something of its own to whichever stage is currently on screen (see ShorPipelineVisual's
+   * CodePanel) without lifting all of this component's stage-navigation state up needlessly. */
+  onActiveChange?: (index: number) => void
+  /** Fired alongside onActiveChange with the new stage's own id -- lets a parent play a one-shot
+   * sound effect specific to what that stage actually represents (see lib/sfx.ts and each lab's
+   * own id -> effect mapping) instead of PipelineAnimation itself needing to know what "encrypt"
+   * or "measure" sound like for every lab that uses it. */
+  onStageSound?: (stageId: string) => void
+}) {
   const reduceMotion = !!useReducedMotion()
   const [active, setActive] = useState(0)
   const [playing, setPlaying] = useState(!reduceMotion)
@@ -135,10 +153,27 @@ export default function PipelineAnimation({ stages, accent = 'gold' }: { stages:
   const dwellMs = BASE_DWELL_MS / speed
 
   useEffect(() => {
+    onActiveChange?.(active)
+    onStageSound?.(stages[active].id)
+    // onActiveChange/onStageSound intentionally excluded: callers pass either a raw setState
+    // (referentially stable) or should memoize it themselves -- re-running this on every parent
+    // render just because an inline callback got a new identity would defeat the point of
+    // syncing to `active`.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [active])
+
+  // Cinematic on first load, not an ambient loop: autoplay runs forward through every stage
+  // exactly once and then stops parked on the last one, handing control back rather than
+  // cycling back to stage one and repeating indefinitely for as long as the tab stays open.
+  useEffect(() => {
     if (!playing) return
     timerRef.current = setTimeout(() => {
+      if (active === stages.length - 1) {
+        setPlaying(false)
+        return
+      }
       setDirection(1)
-      setActive((i) => (i + 1) % stages.length)
+      setActive((i) => i + 1)
       setProgressKey((k) => k + 1)
     }, dwellMs)
     return () => {
@@ -263,7 +298,7 @@ export default function PipelineAnimation({ stages, accent = 'gold' }: { stages:
             initial={reduceMotion ? undefined : { opacity: 0, scale: 0.97, x: direction * 28 }}
             animate={{ opacity: 1, scale: 1, x: 0 }}
             exit={reduceMotion ? undefined : { opacity: 0, scale: 0.97, x: direction * -28 }}
-            transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+            transition={{ duration: DURATION.base, ease: EASE_SIGNATURE }}
             className="relative z-10 flex w-full items-center justify-center p-4 sm:p-8"
           >
             {stage.render({ active: true, reduceMotion, theatre: fullscreen })}
@@ -281,7 +316,8 @@ export default function PipelineAnimation({ stages, accent = 'gold' }: { stages:
         )}
       </div>
 
-      {/* formula strip */}
+      {/* formula strip -- the formal statement of this step, always shown alongside the
+          plain-English caption below rather than gated behind a toggle. */}
       {stage.formula && (
         <div className="mb-4 flex justify-center overflow-x-auto rounded-sm border border-line bg-navy px-4 py-3 text-ink">
           <BlockMath math={stage.formula} />
@@ -335,6 +371,15 @@ export default function PipelineAnimation({ stages, accent = 'gold' }: { stages:
 
   return (
     <>
+      {/* A screen reader gets no other signal that anything changed: the visual canvas swaps
+          contents on every stage change, autoplay advances with nobody touching a control, and
+          none of that reaches anyone not looking at the screen without an explicit announcement.
+          sr-only + aria-live="polite" narrates each stage in the same plain English already
+          written for the caption below the canvas -- not a separate, harder-to-keep-in-sync
+          description track. */}
+      <div aria-live="polite" className="sr-only">
+        Step {active + 1} of {stages.length}: {stage.label}. {stage.caption}
+      </div>
       {theatre ? inertBackground : panel(false)}
       {createPortal(
         <AnimatePresence>

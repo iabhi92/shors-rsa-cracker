@@ -7,19 +7,125 @@ project's real rsa/core.py primitives; nothing here is a mocked or precomputed r
 
 from fastapi import APIRouter, Depends
 
+from attacker.parity_oracle import recover_via_parity_oracle
+from attacker.timing_oracle import TimingComparison, measure_oaep_timing, measure_pkcs7_timing
+from attacker.wiener import generate_wiener_vulnerable_keypair, wiener_attack
 from backend.app.errors import AppError
-from backend.app.rate_limit import dashboard_demo_limiter, limiter_dependency
+from backend.app.rate_limit import dashboard_demo_limiter, limiter_dependency, rsa_keygen_limiter
 from backend.app.schemas.security_demo import (
     MalleabilityRequest,
     MalleabilityResponse,
+    OaepKeygenResponse,
+    ParityOracleRequest,
+    ParityOracleResponse,
+    ParityOracleStep,
     RateLimitPingResponse,
     TamperRequest,
     TamperResponse,
+    TimingComparisonResult,
+    TimingOracleRequest,
+    TimingOracleResponse,
+    TimingScenario,
+    WienerAttackRequest,
+    WienerAttackResponse,
+    WienerKeygenRequest,
+    WienerKeygenResponse,
 )
 from rsa.core import _block_size, decrypt_bytes, decrypt_int, encrypt_bytes, encrypt_int
-from rsa.keygen import PrivateKey, PublicKey
+from rsa.keygen import PrivateKey, PublicKey, generate_keypair
+from rsa.oaep import OaepError, min_modulus_bytes, oaep_decode, oaep_encode
 
 router = APIRouter()
+
+
+def _to_response(comparison: TimingComparison) -> TimingComparisonResult:
+    return TimingComparisonResult(
+        scenarios=[
+            TimingScenario(label=s.label, mean_ns=s.mean_ns, median_ns=s.median_ns, min_ns=s.min_ns, stddev_ns=s.stddev_ns)
+            for s in comparison.scenarios
+        ],
+        gap_ns=comparison.gap_ns,
+        gap_percent=comparison.gap_percent,
+        gap_in_std_errors=comparison.gap_in_std_errors,
+        verdict=comparison.verdict,
+    )
+
+# OAEP with SHA-256 needs a modulus of at least 2*32+2 = 66 bytes (528 bits); 1024 gives real
+# headroom (62 usable message bytes) while still generating in well under a second in pure
+# Python (see rsa/primes.py). Fixed, not user-configurable -- this endpoint exists solely to
+# give the Malleability Lab's OAEP toggle a real key big enough to demonstrate the scheme, not
+# as a general-purpose keygen path.
+OAEP_DEMO_BITS = 1024
+
+
+def _int_to_bytes(value: int) -> bytes:
+    return value.to_bytes((value.bit_length() + 7) // 8 or 1, "big")
+
+
+@router.post("/oaep-keygen", response_model=OaepKeygenResponse, dependencies=[Depends(limiter_dependency(rsa_keygen_limiter))])
+def oaep_keygen() -> OaepKeygenResponse:
+    """A real, fixed 1024-bit RSA keypair -- specifically for the Malleability Lab's "use OAEP
+    padding" toggle, which needs far more room than this project's usual 8-24 bit teaching keys
+    (RSA_MAX_BITS caps /rsa/keygen at 24 bits site-wide, deliberately, so every other demo's keys
+    stay classically breakable in seconds -- see backend/app/limits.py). This endpoint doesn't
+    relax that cap; it's a separate, narrowly-scoped path that only ever serves this one demo."""
+    kp = generate_keypair(OAEP_DEMO_BITS)
+    phi = (kp.p - 1) * (kp.q - 1)
+    return OaepKeygenResponse(
+        p=str(kp.p),
+        q=str(kp.q),
+        n=str(kp.public.n),
+        e=str(kp.public.e),
+        d=str(kp.private.d),
+        phi=str(phi),
+        n_bits=kp.public.n.bit_length(),
+        warning=(
+            f"A real {OAEP_DEMO_BITS}-bit keypair, generated specifically so OAEP padding has "
+            "room to work -- unlike every other key on this site, this one isn't intentionally "
+            "weak (though it's still shown here in full, private key included, for teaching)."
+        ),
+    )
+
+
+@router.post("/wiener-keygen", response_model=WienerKeygenResponse, dependencies=[Depends(limiter_dependency(rsa_keygen_limiter))])
+def wiener_keygen(req: WienerKeygenRequest) -> WienerKeygenResponse:
+    """A real, mathematically valid RSA keypair -- every identity a genuine key satisfies still
+    holds -- deliberately constructed with a small private exponent d (see
+    attacker/wiener.py's own generate_wiener_vulnerable_keypair) so the Wiener's-attack demo has
+    something real to break. Nothing else on this site ever generates a key this way."""
+    kp = generate_wiener_vulnerable_keypair(req.bits)
+    wiener_bound_bits = kp.public.n.bit_length() / 4 - 1.585  # log2(3), Wiener's own constant
+    return WienerKeygenResponse(
+        n=str(kp.public.n),
+        e=str(kp.public.e),
+        d=str(kp.private.d),
+        p=str(kp.p),
+        q=str(kp.q),
+        n_bits=kp.public.n.bit_length(),
+        d_bits=kp.private.d.bit_length(),
+        wiener_bound_bits=wiener_bound_bits,
+    )
+
+
+@router.post("/wiener-attack", response_model=WienerAttackResponse)
+def wiener_attack_endpoint(req: WienerAttackRequest) -> WienerAttackResponse:
+    """Recovers the entire private key from nothing but (n, e) -- no ciphertext, no oracle, no d
+    anywhere in the request. See attacker/wiener.py's own module docstring for the real
+    continued-fraction math, shared unchanged with quantum/shor.py's period-finding
+    post-processing."""
+    try:
+        n, e = int(req.n), int(req.e)
+    except ValueError as exc:
+        raise AppError("n and e must be decimal integers") from exc
+    result = wiener_attack(n, e)
+    return WienerAttackResponse(
+        succeeded=result.succeeded,
+        recovered_d=str(result.recovered_d) if result.recovered_d is not None else None,
+        recovered_p=str(result.recovered_p) if result.recovered_p is not None else None,
+        recovered_q=str(result.recovered_q) if result.recovered_q is not None else None,
+        convergents_tried=result.convergents_tried,
+        total_convergents=result.total_convergents,
+    )
 
 
 @router.post("/malleability", response_model=MalleabilityResponse)
@@ -30,36 +136,127 @@ def malleability(req: MalleabilityRequest) -> MalleabilityResponse:
     pub = PublicKey(n=req.n, e=req.e)
     priv = PrivateKey(n=req.n, d=req.d)
 
+    # With OAEP on, what actually gets RSA-encrypted is message_int wrapped in a real OAEP block
+    # (rsa/oaep.py) -- not message_int directly. The leading 0x00 byte OAEP always produces
+    # guarantees the padded integer is < n regardless of k, so encrypt_int's own 0 <= m < n check
+    # can never trip here.
+    k = (req.n.bit_length() + 7) // 8
+    if req.use_oaep:
+        if k < min_modulus_bytes():
+            raise AppError(
+                f"n is only {k} bytes ({req.n.bit_length()} bits); OAEP with SHA-256 needs a "
+                f"modulus of at least {min_modulus_bytes()} bytes (528 bits) to have room for its "
+                "own structure -- generate a real 1024-bit-or-larger keypair to use it"
+            )
+        try:
+            encoded = oaep_encode(_int_to_bytes(req.message_int), k)
+        except ValueError as err:
+            raise AppError(str(err)) from err
+        m = int.from_bytes(encoded, "big")
+    else:
+        m = req.message_int
+
     # The victim encrypts m normally.
-    c = encrypt_int(req.message_int, pub)
+    c = encrypt_int(m, pub)
 
     # The attacker, holding ONLY the public key (n, e) and the intercepted ciphertext c --
     # never d, never m -- multiplies in a blinding factor s. This is legal RSA math, not a
     # bug in this implementation: (m^e)(s^e) = (m*s)^e (mod n) for any e, by definition of
-    # modular exponentiation, so c' decrypts as if m had been multiplied by s all along.
+    # modular exponentiation, so c' decrypts as if m had been multiplied by s all along. This
+    # holds completely unchanged whether or not m itself is an OAEP-padded block -- the attack
+    # operates purely on the ciphertext integer, before OAEP is ever involved.
     s_pow_e = pow(req.blind_factor, req.e, req.n)
     c_tampered = (c * s_pow_e) % req.n
 
     # The victim decrypts c' exactly as they would any other ciphertext -- they have no way
-    # to know it was tampered with, because textbook RSA carries no integrity check at all.
+    # to know it was tampered with from the ciphertext alone, because textbook RSA carries no
+    # integrity check at all. With OAEP, this raw decryption is only the first half of decrypting
+    # -- the victim then tries to remove the OAEP padding, which is where tampering finally
+    # becomes visible.
     m_recovered = decrypt_int(c, priv)
     m_tampered = decrypt_int(c_tampered, priv)
-    expected = (req.message_int * req.blind_factor) % req.n
+    expected = (m * req.blind_factor) % req.n
+
+    original_oaep_valid: bool | None = None
+    tampered_oaep_valid: bool | None = None
+    original_message_int: int | None = None
+    tampered_message_int: int | None = None
+    explanation = (
+        f"Without ever seeing d or m, the attacker turned an encryption of {req.message_int} "
+        f"into an encryption of {req.message_int} * {req.blind_factor} mod n = {expected}, "
+        "by multiplying the ciphertext by s^e mod n. This is why real RSA always uses "
+        "padding (OAEP): padding destroys the algebraic structure (m^e)(s^e) = (ms)^e that "
+        "this attack depends on."
+    )
+
+    if req.use_oaep:
+        try:
+            original_message_int = int.from_bytes(oaep_decode(m_recovered.to_bytes(k, "big"), k), "big")
+            original_oaep_valid = True
+        except OaepError:
+            original_oaep_valid = False
+        try:
+            tampered_message_int = int.from_bytes(oaep_decode(m_tampered.to_bytes(k, "big"), k), "big")
+            tampered_oaep_valid = True
+        except OaepError:
+            tampered_oaep_valid = False
+
+        explanation = (
+            "The ciphertext algebra above still works exactly as before -- multiplying by s^e mod n "
+            f"still turns the encryption of message m into an encryption of m * {req.blind_factor} "
+            "mod n, whether or not m is OAEP-padded, because that attack never looks past the "
+            "ciphertext integer. What OAEP actually changes is what happens next: the victim's "
+            "decryption now includes an OAEP-decode step, and "
+            + (
+                "the tampered ciphertext fails it -- the attack is detected and rejected instead of "
+                "silently handing back attacker-controlled plaintext."
+                if not tampered_oaep_valid
+                else "in this run the tampered block coincidentally still passed OAEP's structural "
+                "check (astronomically unlikely, but not impossible) -- try a different blind factor."
+            )
+        )
 
     return MalleabilityResponse(
-        original_ciphertext=c,
-        tampered_ciphertext=c_tampered,
-        original_plaintext=m_recovered,
-        tampered_plaintext=m_tampered,
-        expected_tampered_plaintext=expected,
+        original_ciphertext=str(c),
+        tampered_ciphertext=str(c_tampered),
+        original_plaintext=str(m_recovered),
+        tampered_plaintext=str(m_tampered),
+        expected_tampered_plaintext=str(expected),
         matches_prediction=m_tampered == expected,
-        explanation=(
-            f"Without ever seeing d or m, the attacker turned an encryption of {req.message_int} "
-            f"into an encryption of {req.message_int} * {req.blind_factor} mod n = {expected}, "
-            "by multiplying the ciphertext by s^e mod n. This is why real RSA always uses "
-            "padding (OAEP): padding destroys the algebraic structure (m^e)(s^e) = (ms)^e that "
-            "this attack depends on."
-        ),
+        explanation=explanation,
+        oaep_used=req.use_oaep,
+        original_oaep_valid=original_oaep_valid,
+        tampered_oaep_valid=tampered_oaep_valid,
+        original_message_int=original_message_int,
+        tampered_message_int=tampered_message_int,
+    )
+
+
+@router.post("/parity-oracle-attack", response_model=ParityOracleResponse)
+def parity_oracle_attack(req: ParityOracleRequest) -> ParityOracleResponse:
+    """Full plaintext recovery using ONLY the public key and a one-bit-per-query oracle -- see
+    attacker/parity_oracle.py's own module docstring for the real math (RSA's multiplicative
+    homomorphism plus a parity leak is enough to binary-search out the entire message). The
+    oracle itself is built here from the real private key purely to *simulate* what a genuine
+    side channel would leak in a real deployment; recover_via_parity_oracle never receives d."""
+    if not (0 <= req.message_int < req.n):
+        raise AppError(f"message_int must satisfy 0 <= m < n (n={req.n})")
+
+    pub = PublicKey(n=req.n, e=req.e)
+    priv = PrivateKey(n=req.n, d=req.d)
+    ciphertext = encrypt_int(req.message_int, pub)
+
+    def oracle(c: int) -> int:
+        return decrypt_int(c, priv) % 2
+
+    result = recover_via_parity_oracle(ciphertext, pub, oracle)
+
+    return ParityOracleResponse(
+        original_message=req.message_int,
+        recovered_message=result.recovered_message,
+        matches_original=result.recovered_message == req.message_int,
+        total_queries=result.total_queries,
+        steps=[ParityOracleStep(query_number=s.query_number, oracle_bit=s.oracle_bit, lo=s.lo, hi=s.hi) for s in result.queries],
     )
 
 
@@ -123,6 +320,24 @@ def tamper(req: TamperRequest) -> TamperResponse:
             "with a MAC (or an AEAD construction) over the whole ciphertext, which textbook RSA "
             "deliberately doesn't have."
         ),
+    )
+
+
+@router.post(
+    "/timing-oracle",
+    response_model=TimingOracleResponse,
+    dependencies=[Depends(limiter_dependency(dashboard_demo_limiter))],
+)
+def timing_oracle(req: TimingOracleRequest) -> TimingOracleResponse:
+    """Empirically measures, right now, on this actual server, whether this project's own
+    padding-validation code leaks timing information about *why* a ciphertext was rejected --
+    see attacker/timing_oracle.py's own module docstring for the real Bleichenbacher-relevant
+    mechanism this demonstrates. Rate-limited like the dashboard's other live demos: each call
+    runs thousands of real measurements, not a cheap lookup."""
+    return TimingOracleResponse(
+        trials=req.trials,
+        pkcs7=_to_response(measure_pkcs7_timing(req.trials)),
+        oaep=_to_response(measure_oaep_timing(req.trials)),
     )
 
 

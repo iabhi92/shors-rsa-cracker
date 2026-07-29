@@ -6,6 +6,36 @@ import { useAction } from '../hooks/useApi'
 import type { QftDemoResponse } from '../types/api'
 import { Button, Card, ErrorBanner, PageHeader, SuccessBanner } from '../components/ui'
 import AmplitudeView from '../components/AmplitudeView'
+import PhaseDialRow from '../components/PhaseDialRow'
+import CodePanel, { type CodeSnippet } from '../components/CodePanel'
+
+// Copied verbatim from this repository's own quantum/qft.py.
+const QFT_SNIPPETS: Record<string, CodeSnippet> = {
+  forward: {
+    file: 'quantum/qft.py',
+    startLine: 26,
+    code:
+      'def apply_qft(register: GateSink, qubits: list[int]) -> None:\n' +
+      '    """Apply the QFT circuit to `qubits` (qubits[0] most significant) in place."""\n' +
+      '    n = len(qubits)\n' +
+      '    for i in range(n):\n' +
+      '        target = qubits[i]\n' +
+      '        register.apply_gate(H, target)\n' +
+      '        for j in range(i + 1, n):\n' +
+      '            control = qubits[j]\n' +
+      '            k = j - i + 1  # rotation R_k = diag(1, e^{2*pi*i / 2^k})\n' +
+      '            register.apply_controlled_gate(phase(2 * np.pi / 2**k), control, target)\n' +
+      '    for i in range(n // 2):\n' +
+      '        register.apply_swap(qubits[i], qubits[n - 1 - i])',
+    notes: {
+      29: 'One qubit at a time, most significant first -- n Hadamards and O(n²) controlled-phase gates total.',
+      31: 'The Hadamard is what actually creates superposition for this qubit -- everything else is phase.',
+      34: 'The rotation angle shrinks as k grows -- qubits further apart influence each other less.',
+      35: 'Applies e^{iπ/2^(k-1)} conditionally -- the actual phase-encoding step, once per qubit pair.',
+      36: 'A final bit-order reversal -- the QFT\'s own convention, undone by apply_inverse_qft\'s first step.',
+    },
+  },
+}
 
 export default function QftPage() {
   const [nQubits, setNQubits] = useState(3)
@@ -72,6 +102,26 @@ export default function QftPage() {
             ) : (
               <ErrorBanner message="Did not match the exact DFT matrix -- unexpected, please report this." />
             )}
+            {/* The phase itself -- what a probability bar chart can't show at all. Before a QFT,
+                every basis state is equal length and (for a definite input) already in phase;
+                after one, the arrows fan out to their real computed angles. This is the actual
+                mechanism period-finding depends on, not just the peaked-vs-flat probability
+                shape below. */}
+            <div className="rounded-sm border border-line bg-navy p-4">
+              <p className="mb-3 text-center font-mono text-xs text-ink-muted uppercase">
+                Phase, before &amp; after (angle = phase, length = relative magnitude)
+              </p>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <p className="mb-2 text-center text-xs text-ink-muted">Before</p>
+                  <PhaseDialRow amplitudes={qft.state.data.before} />
+                </div>
+                <div>
+                  <p className="mb-2 text-center text-xs text-ink-muted">After</p>
+                  <PhaseDialRow amplitudes={qft.state.data.after} />
+                </div>
+              </div>
+            </div>
             {/* Stacked, not side-by-side: the amplitude table needs ~560px to show all three
                 columns without truncating, which a two-up layout can't give it on any real
                 screen width (a 2-column split of a ~900px card leaves ~430px each). Full width,
@@ -82,6 +132,11 @@ export default function QftPage() {
             </div>
           </div>
         )}
+      </Card>
+
+      <Card className="mt-6">
+        <h2 className="mb-2 font-medium text-ink">The actual code behind this step</h2>
+        <CodePanel stageId="forward" snippets={QFT_SNIPPETS} />
       </Card>
 
       <Card className="mt-6">

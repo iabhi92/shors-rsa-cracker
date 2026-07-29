@@ -27,6 +27,12 @@ export default function QuantumOrbitLayer() {
             <motion.circle
               r="2.4"
               fill="#e3b45e"
+              // initial explicitly seeded to the animate keyframes' own first value: animating
+              // cx/cy via `animate` with no `initial` at all throws "Expected length, undefined"
+              // on mount (the same SVG-attribute bug class caught and fixed elsewhere on this
+              // page's own PhaseDial/AliceBobScene/etc.) -- reproduces specifically on a
+              // client-side route transition back onto this page, not a fresh top-level load.
+              initial={{ cx: arc.cx - arc.rx, cy: arc.cy }}
               animate={{
                 cx: [arc.cx - arc.rx, arc.cx, arc.cx + arc.rx, arc.cx, arc.cx - arc.rx],
                 cy: [arc.cy, arc.cy - arc.ry, arc.cy, arc.cy - arc.ry, arc.cy],

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import { InlineMath } from 'react-katex'
 import { apiPost } from '../api/client'
@@ -7,6 +7,7 @@ import type { DecryptResponse, EncryptResponse, KeygenResponse } from '../types/
 import { Button, Card, ErrorBanner, PageHeader, WarningBanner } from '../components/ui'
 import KeyIllustration from '../components/KeyIllustration'
 import RsaFlowVisual from '../components/rsa/RsaFlowVisual'
+import { playKeygen, playEncrypt, playDecrypt } from '../lib/sfx'
 
 export default function RsaLabPage() {
   const [bits, setBits] = useState(16)
@@ -16,6 +17,18 @@ export default function RsaLabPage() {
   const decrypt = useAction((n: number, d: number, ciphertext: number[]) =>
     apiPost<DecryptResponse>('/rsa/decrypt', { n, d, ciphertext }),
   )
+
+  // Real action-level feedback -- fires the moment your own click actually succeeds, separate
+  // from (and in addition to) the illustrative pipeline animation's own per-stage sounds below.
+  useEffect(() => {
+    if (keygen.state.status === 'success') playKeygen()
+  }, [keygen.state.status])
+  useEffect(() => {
+    if (encrypt.state.status === 'success') playEncrypt()
+  }, [encrypt.state.status])
+  useEffect(() => {
+    if (decrypt.state.status === 'success') playDecrypt()
+  }, [decrypt.state.status])
 
   const key = keygen.state.status === 'success' ? keygen.state.data : null
   const ciphertext = encrypt.state.status === 'success' ? encrypt.state.data : null

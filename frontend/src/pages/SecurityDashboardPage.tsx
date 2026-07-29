@@ -4,6 +4,7 @@ import { apiGet, BASE } from '../api/client'
 import { useFetchOnMount } from '../hooks/useApi'
 import type { ProjectMeta } from '../types/api'
 import { Card, PageHeader, Spinner, StatCard } from '../components/ui'
+import TimingOracleDemo from '../components/TimingOracleDemo'
 
 const EXPECTED_HEADERS = [
   { key: 'content-security-policy', label: 'Content-Security-Policy' },
@@ -71,6 +72,8 @@ export default function SecurityDashboardPage() {
       </Card>
 
       <RateLimitDemo />
+
+      <TimingOracleDemo />
 
       <Card className="mt-6">
         <h2 className="font-medium text-ink">Dependency &amp; verification status</h2>

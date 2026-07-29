@@ -19,6 +19,7 @@ const ResourceEstimatePage = lazy(() => import('./pages/ResourceEstimatePage'))
 const IbmHardwarePage = lazy(() => import('./pages/IbmHardwarePage'))
 const DocPage = lazy(() => import('./pages/DocPage'))
 const DocsIndexPage = lazy(() => import('./pages/DocsIndexPage'))
+const HistoryPage = lazy(() => import('./pages/HistoryPage'))
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'))
 
 function LazyPage({ children }: { children: React.ReactNode }) {
@@ -56,6 +57,7 @@ export default function App() {
           <Route path="security" element={<LazyPage><DocPage forcedSlug="security" /></LazyPage>} />
           <Route path="docs" element={<LazyPage><DocsIndexPage /></LazyPage>} />
           <Route path="docs/:slug" element={<LazyPage><DocPage /></LazyPage>} />
+          <Route path="history" element={<LazyPage><HistoryPage /></LazyPage>} />
           <Route path="*" element={<LazyPage><NotFoundPage /></LazyPage>} />
         </Route>
       </Routes>

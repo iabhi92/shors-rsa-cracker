@@ -6,10 +6,10 @@ import type { ProjectMeta } from '../types/api'
 import { Card, ErrorBanner, Spinner, StatCard } from '../components/ui'
 import InterferenceCanvas from '../components/InterferenceCanvas'
 import SydneyHarbourHero from '../components/home/SydneyHarbourHero'
-import SydneyTrainScene from '../components/home/SydneyTrainScene'
-import SydneyCityMotionScene from '../components/home/SydneyCityMotionScene'
+import TutorialClassScene from '../components/home/TutorialClassScene'
 import { BenchmarkSketch, CircuitSketch, EditorialModuleCard, OrbitSketch, WaveSketch } from '../components/home/EditorialModuleCard'
 import CoordinateFooter from '../components/home/CoordinateFooter'
+import { DURATION, EASE_SIGNATURE } from '../lib/motion'
 
 const MODULES = [
   {
@@ -19,6 +19,7 @@ const MODULES = [
     description: 'See how RSA holds up against today\'s best classical algorithms.',
     cta: 'Explore',
     sketch: <BenchmarkSketch />,
+    accent: '#c99545',
   },
   {
     to: '/shor',
@@ -27,6 +28,7 @@ const MODULES = [
     description: "Run Shor's algorithm step-by-step in an interactive environment.",
     cta: 'Open Lab',
     sketch: <OrbitSketch />,
+    accent: '#8065b8',
   },
   {
     to: '/qft',
@@ -35,6 +37,7 @@ const MODULES = [
     description: "Understand the heart of Shor's algorithm -- and how it finds periods the classical world can't.",
     cta: 'Explore',
     sketch: <WaveSketch />,
+    accent: '#204a66',
   },
   {
     to: '/circuit-explorer',
@@ -43,6 +46,7 @@ const MODULES = [
     description: 'Inspect real quantum circuits, controlled operations, and register evolution.',
     cta: 'View Circuits',
     sketch: <CircuitSketch />,
+    accent: '#54c89a',
   },
 ]
 
@@ -62,10 +66,9 @@ export default function HomePage() {
         <motion.section
           className="mb-10"
           initial="hidden"
-          whileInView="show"
-          viewport={{ once: true, margin: '-100px' }}
+          animate="show"
           variants={fadeUp}
-          transition={{ duration: 0.5 }}
+          transition={{ duration: DURATION.base, ease: EASE_SIGNATURE }}
         >
           <h2 className="mb-4 flex items-center gap-2.5 font-mono text-sm font-semibold tracking-wide text-ink-muted uppercase">
             // what the QFT step is doing
@@ -93,10 +96,9 @@ export default function HomePage() {
         <motion.section
           className="mb-10"
           initial="hidden"
-          whileInView="show"
-          viewport={{ once: true, margin: '-80px' }}
+          animate="show"
           variants={fadeUp}
-          transition={{ duration: 0.4 }}
+          transition={{ duration: DURATION.base, ease: EASE_SIGNATURE }}
         >
           <h2 className="mb-4 font-mono text-sm font-semibold tracking-wide text-ink-muted uppercase">Project stats (from this repository)</h2>
           {meta.status === 'loading' && <Spinner label="Loading project stats…" />}
@@ -117,31 +119,36 @@ export default function HomePage() {
 
         <motion.section
           initial="hidden"
-          whileInView="show"
-          viewport={{ once: true, margin: '-80px' }}
+          animate="show"
           variants={{ hidden: {}, show: { transition: { staggerChildren: 0.08 } } }}
         >
           <h2 className="mb-4 font-mono text-sm font-semibold tracking-wide text-ink-muted uppercase">Start here</h2>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {MODULES.map((mod) => (
-              <motion.div key={mod.to} variants={fadeUp} transition={{ duration: 0.35 }}>
+              <motion.div key={mod.to} variants={fadeUp} transition={{ duration: DURATION.fast, ease: EASE_SIGNATURE }}>
                 <EditorialModuleCard {...mod} />
               </motion.div>
             ))}
           </div>
         </motion.section>
 
+        {/* Same fade as the sections above, just written as a raw object instead of the shared
+            `fadeUp` variant (this one has no siblings to stagger with). All of these sections
+            used to be gated behind `whileInView`/`viewport={{ once: true }}`, which hides
+            content at opacity 0 until an IntersectionObserver fires -- on a section already near
+            the fold on a shorter screen, that trigger could be missed entirely with no retry,
+            a real reported bug (the train and car scenes staying invisible from first load).
+            The same fragility turned out to affect StatCard's count-up animation too (see
+            AnimatedNumber in components/ui.tsx), so every scroll-gated section on this page now
+            just animates on mount instead. */}
         <motion.div
           className="relative -mx-4 mt-10 w-[calc(100%+2rem)] border-y border-line bg-navy-secondary px-4 py-6 sm:-mx-8 sm:w-[calc(100%+4rem)] sm:px-8 sm:py-8"
-          initial="hidden"
-          whileInView="show"
-          viewport={{ once: true, margin: '-80px' }}
-          variants={fadeUp}
-          transition={{ duration: 0.5 }}
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: DURATION.base, ease: EASE_SIGNATURE }}
         >
-          <div className="mx-auto grid max-w-5xl gap-6 sm:grid-cols-2">
-            <SydneyTrainScene />
-            <SydneyCityMotionScene />
+          <div className="mx-auto max-w-5xl">
+            <TutorialClassScene />
           </div>
         </motion.div>
 

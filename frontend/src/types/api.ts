@@ -31,13 +31,82 @@ export interface DecryptResponse {
 
 // --- security demo ---
 export interface MalleabilityResponse {
-  original_ciphertext: number
-  tampered_ciphertext: number
-  original_plaintext: number
-  tampered_plaintext: number
-  expected_tampered_plaintext: number
+  // Decimal strings, not numbers: with use_oaep these carry ~1024-bit values, well past what a
+  // JS float64 can represent exactly -- see the matching Pydantic schema's own docstring.
+  original_ciphertext: string
+  tampered_ciphertext: string
+  original_plaintext: string
+  tampered_plaintext: string
+  expected_tampered_plaintext: string
   matches_prediction: boolean
   explanation: string
+  oaep_used: boolean
+  original_oaep_valid: boolean | null
+  tampered_oaep_valid: boolean | null
+  original_message_int: number | null
+  tampered_message_int: number | null
+}
+export interface ParityOracleStep {
+  query_number: number
+  oracle_bit: 0 | 1
+  lo: number
+  hi: number
+}
+export interface ParityOracleResponse {
+  original_message: number
+  recovered_message: number
+  matches_original: boolean
+  total_queries: number
+  steps: ParityOracleStep[]
+}
+export interface WienerKeygenResponse {
+  n: string
+  e: string
+  d: string
+  p: string
+  q: string
+  n_bits: number
+  d_bits: number
+  wiener_bound_bits: number
+}
+export interface WienerAttackResponse {
+  succeeded: boolean
+  recovered_d: string | null
+  recovered_p: string | null
+  recovered_q: string | null
+  convergents_tried: number
+  total_convergents: number
+}
+// n/e/d/p/q/phi are decimal strings for the same reason as MalleabilityResponse above -- this
+// is a real ~1024-bit key, unlike every other KeygenResponse on this site.
+export interface OaepKeygenResponse {
+  p: string
+  q: string
+  n: string
+  e: string
+  d: string
+  phi: string
+  n_bits: number
+  warning: string
+}
+export interface TimingScenario {
+  label: string
+  mean_ns: number
+  median_ns: number
+  min_ns: number
+  stddev_ns: number
+}
+export interface TimingComparisonResult {
+  scenarios: TimingScenario[]
+  gap_ns: number
+  gap_percent: number
+  gap_in_std_errors: number
+  verdict: string
+}
+export interface TimingOracleResponse {
+  trials: number
+  pkcs7: TimingComparisonResult
+  oaep: TimingComparisonResult
 }
 export interface TamperResponse {
   block_size_bytes: number
@@ -66,6 +135,20 @@ export interface AttackResponse {
 export interface CompareResponse {
   n: number
   results: AttackResponse[]
+}
+export interface TrialDivisionTraceStep {
+  divisor: number
+  remainder: number
+  is_factor: boolean
+}
+export interface TrialDivisionTraceResponse {
+  n: number
+  succeeded: boolean
+  factor: number | null
+  other_factor: number | null
+  operations: number
+  elapsed_seconds: number
+  steps: TrialDivisionTraceStep[]
 }
 export interface BenchmarkRow {
   bits: number
@@ -178,6 +261,24 @@ export interface ResourceEstimateResponse {
     physical_qubits_headline: string
   }
   methodology_note: string
+}
+export interface ResourceCurvePoint {
+  bits: number
+  total_qubits: number
+  toffoli_equivalent_gates: number
+  ge_logical_qubits: number
+  ge_toffoli_gates: number
+}
+export interface ResourceCurveResponse {
+  points: ResourceCurvePoint[]
+}
+export interface ClassicalTimeEstimateResponse {
+  bits: number
+  reference_bits: number
+  trial_division_log10_seconds: number
+  trial_division_human: string
+  pollards_rho_log10_seconds: number
+  pollards_rho_human: string
 }
 
 // --- ibm hardware ---

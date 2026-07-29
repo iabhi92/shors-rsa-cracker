@@ -2,6 +2,8 @@ import { NavLink, Outlet, useLocation } from 'react-router'
 import UnswBuildingIllustration from './UnswBuildingIllustration'
 import { useEffect, useState } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
+import { DURATION, EASE_SIGNATURE } from '../lib/motion'
+import SfxToggle from './SfxToggle'
 import {
   Atom,
   BarChart3,
@@ -12,6 +14,7 @@ import {
   Cpu,
   FlaskConical,
   GitCompareArrows,
+  History,
   Home,
   Info,
   KeyRound,
@@ -32,7 +35,7 @@ import type { CommandItem } from './CommandPalette'
 import AmbientBackground from './AmbientBackground'
 
 /** Six groups, named and ordered to match the site's own visual identity brief -- a first-time
- * visitor can hold six words in their head, even though there are sixteen actual pages behind
+ * visitor can hold six words in their head, even though there are seventeen actual pages behind
  * them (see the command palette / `/guide` for the full list, nothing here is hidden). */
 const NAV_SECTIONS: { label: string; icon: LucideIcon; links: { to: string; label: string; icon: LucideIcon }[] }[] = [
   {
@@ -78,6 +81,7 @@ const NAV_SECTIONS: { label: string; icon: LucideIcon; links: { to: string; labe
     icon: Info,
     links: [
       { to: '/guide', label: 'How to Use This Site', icon: Compass },
+      { to: '/history', label: 'History of RSA & Shor', icon: History },
       { to: '/security-dashboard', label: 'Security Dashboard', icon: Radar },
       { to: '/security', label: 'Security & Limitations', icon: ShieldCheck },
       { to: '/docs', label: 'Documentation', icon: BookOpen },
@@ -256,7 +260,7 @@ function AnimatedOutlet() {
         initial={reduceMotion ? undefined : { opacity: 0, y: 8, filter: 'blur(6px)' }}
         animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
         exit={reduceMotion ? undefined : { opacity: 0, y: -6, filter: 'blur(6px)' }}
-        transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+        transition={{ duration: 0.28, ease: EASE_SIGNATURE }}
       >
         <Outlet />
       </motion.div>
@@ -339,7 +343,7 @@ export default function Layout() {
             initial={{ opacity: 0, x: -16 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -16 }}
-            transition={{ duration: 0.16 }}
+            transition={{ duration: DURATION.micro }}
             className="fixed inset-y-0 left-0 z-40 flex w-72 flex-col overflow-y-auto border-r border-line bg-navy px-5 py-6 shadow-2xl lg:hidden"
           >
             <SidebarContent onNavigate={() => setNavOpen(false)} />
@@ -352,7 +356,7 @@ export default function Layout() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.16 }}
+            transition={{ duration: DURATION.micro }}
             onClick={() => setNavOpen(false)}
             className="fixed inset-0 z-30 bg-black/70 lg:hidden"
           />
@@ -360,7 +364,8 @@ export default function Layout() {
       </AnimatePresence>
 
       <div className="lg:pl-72">
-        <div className="hidden items-center justify-end border-b border-line bg-navy px-4 py-3 sm:px-8 lg:flex">
+        <div className="hidden items-center justify-end gap-2 border-b border-line bg-navy px-4 py-3 sm:px-8 lg:flex">
+          <SfxToggle />
           <CommandPaletteTrigger onOpen={() => setPaletteOpen(true)} />
         </div>
         <main className="relative z-10 mx-auto min-w-0 max-w-6xl px-4 py-8 sm:px-8">

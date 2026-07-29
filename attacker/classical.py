@@ -23,6 +23,18 @@ from dataclasses import dataclass
 
 
 @dataclass
+class TrialDivisionStep:
+    """One real divisor actually tried by trial_division -- not a sampled/synthetic summary.
+    Bounded naturally: trial_division only ever tries odd divisors up to sqrt(n), which for
+    this project's largest allowed n (10,000,000, see backend/app/limits.py) is at most ~1580
+    steps -- small enough to return and replay in full, never needing to be truncated."""
+
+    divisor: int
+    remainder: int
+    is_factor: bool
+
+
+@dataclass
 class FactorAttemptResult:
     n: int
     method: str
@@ -32,6 +44,10 @@ class FactorAttemptResult:
     elapsed_seconds: float
     succeeded: bool
     timed_out: bool = False
+    # Populated only when trial_division is called with collect_trace=True -- every other
+    # method leaves this None, since only trial_division's step count stays small enough
+    # (see TrialDivisionStep's own docstring) to collect and replay in full.
+    trace: list[TrialDivisionStep] | None = None
 
     def __post_init__(self) -> None:
         if self.succeeded:
@@ -53,27 +69,40 @@ def _sieve_primes_up_to(limit: int) -> list[int]:
     return primes
 
 
-def trial_division(n: int, timeout: float | None = None) -> FactorAttemptResult:
-    """Try every odd divisor up to sqrt(n). O(sqrt(n)) time, O(1) space."""
+def trial_division(n: int, timeout: float | None = None, collect_trace: bool = False) -> FactorAttemptResult:
+    """Try every odd divisor up to sqrt(n). O(sqrt(n)) time, O(1) space.
+
+    `collect_trace=True` records every divisor actually tried (see TrialDivisionStep) for the
+    Classical Attack Lab's replay mode -- off by default so every other caller (the benchmark
+    script, the four-way /compare endpoint) keeps the same zero-overhead behavior it always had.
+    """
     start = time.perf_counter()
     operations = 0
+    trace: list[TrialDivisionStep] | None = [] if collect_trace else None
 
     if n % 2 == 0:
-        return FactorAttemptResult(n, "trial_division", 2, n // 2, 1, time.perf_counter() - start, True)
+        if trace is not None:
+            trace.append(TrialDivisionStep(2, 0, True))
+        return FactorAttemptResult(n, "trial_division", 2, n // 2, 1, time.perf_counter() - start, True, trace=trace)
 
     limit = math.isqrt(n)
     d = 3
     while d <= limit:
         operations += 1
-        if n % d == 0:
+        remainder = n % d
+        if trace is not None:
+            trace.append(TrialDivisionStep(d, remainder, remainder == 0))
+        if remainder == 0:
             elapsed = time.perf_counter() - start
-            return FactorAttemptResult(n, "trial_division", d, n // d, operations, elapsed, True)
+            return FactorAttemptResult(n, "trial_division", d, n // d, operations, elapsed, True, trace=trace)
         if timeout is not None and operations % 200_000 == 0 and time.perf_counter() - start > timeout:
             elapsed = time.perf_counter() - start
-            return FactorAttemptResult(n, "trial_division", None, None, operations, elapsed, False, timed_out=True)
+            return FactorAttemptResult(
+                n, "trial_division", None, None, operations, elapsed, False, timed_out=True, trace=trace
+            )
         d += 2
     elapsed = time.perf_counter() - start
-    return FactorAttemptResult(n, "trial_division", None, None, operations, elapsed, False)
+    return FactorAttemptResult(n, "trial_division", None, None, operations, elapsed, False, trace=trace)
 
 
 def fermat_factorization(

@@ -1,6 +1,44 @@
+import { useState } from 'react'
 import { Link } from 'react-router'
-import { Command, Compass, Eye, FlaskConical, Lightbulb, Search, Terminal } from 'lucide-react'
+import { ArrowRight, Command, Compass, Eye, FlaskConical, Lightbulb, Search, Swords, Terminal } from 'lucide-react'
 import { Card, PageHeader } from '../components/ui'
+
+/** The exact same bounds the real command palette uses to recognize a bare composite number as
+ * "Factor n = ..." (see CommandPalette.tsx) -- mirrored here, not re-guessed, so this preview
+ * never claims the palette accepts something it actually wouldn't. */
+const MIN_N = 4
+const MAX_N = 10_000_000
+
+function QuickActionTry() {
+  const [value, setValue] = useState('3233')
+  const asInt = Number(value.trim())
+  const valid = value.trim() !== '' && Number.isInteger(asInt) && asInt >= MIN_N && asInt <= MAX_N
+
+  return (
+    <div className="mt-3 flex flex-wrap items-center gap-2 rounded-sm border border-line bg-navy p-3">
+      <span className="font-mono text-xs text-ink-muted">try it --</span>
+      <input
+        type="text"
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        className="focus-ring w-28 rounded-sm border border-line bg-surface px-2 py-1 font-mono text-sm text-ink"
+        aria-label="A number to factor"
+      />
+      {valid ? (
+        <Link
+          to={`/classical-attacks?n=${asInt}`}
+          className="focus-ring flex items-center gap-1.5 rounded-sm border border-gold/40 bg-gold/10 px-2.5 py-1 font-mono text-xs text-gold-warm transition-colors hover:border-gold/70"
+        >
+          <Swords className="h-3.5 w-3.5" /> Factor n = {asInt} <ArrowRight className="h-3 w-3" />
+        </Link>
+      ) : (
+        <span className="font-mono text-xs text-ink-muted">
+          type a whole number from {MIN_N} to {MAX_N.toLocaleString()}
+        </span>
+      )}
+    </div>
+  )
+}
 
 export default function GuidePage() {
   return (
@@ -82,8 +120,9 @@ export default function GuidePage() {
               <Link to="/classical-attacks" className="text-gold underline underline-offset-2">
                 Classical Attack Lab
               </Link>{' '}
-              with all four attacks already run against it.
+              with all four attacks already run against it. This is that exact same command, live:
             </p>
+            <QuickActionTry />
           </div>
         </div>
       </Card>
@@ -153,14 +192,29 @@ export default function GuidePage() {
               <p className="font-medium text-ink">Project</p>
               <p className="mt-1 text-ink-muted">A live security dashboard (self-checking headers and rate limits), the honest security/limitations writeup, and this project's own markdown notes rendered directly from the repo.</p>
             </div>
-            <div>
-              <p className="font-medium text-ink">Not sure where to start?</p>
-              <p className="mt-1 text-ink-muted">
-                <Link to="/rsa" className="text-gold underline underline-offset-2">RSA Laboratory</Link> →{' '}
-                <Link to="/classical-attacks" className="text-gold underline underline-offset-2">Classical Attack Lab</Link> →{' '}
-                <Link to="/shor" className="text-gold underline underline-offset-2">Shor's Algorithm Lab</Link> is the intended order --
-                break it by hand first, then watch why quantum changes the math.
-              </p>
+            <div className="sm:col-span-2">
+              <p className="font-medium text-ink">Not sure where to start? Follow this order:</p>
+              <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                {[
+                  { to: '/rsa', label: 'RSA Laboratory', hint: 'build a real key, lock a message' },
+                  { to: '/classical-attacks', label: 'Classical Attack Lab', hint: 'break it by hand' },
+                  { to: '/shor', label: "Shor's Algorithm Lab", hint: 'watch quantum change the math' },
+                ].map((step, i, arr) => (
+                  <span key={step.to} className="flex items-center gap-1.5">
+                    <Link
+                      to={step.to}
+                      title={step.hint}
+                      className="focus-ring flex items-center gap-1.5 rounded-sm border border-line px-2.5 py-1.5 transition-colors hover:border-gold/50 hover:bg-gold/5"
+                    >
+                      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-gold/60 font-mono text-[0.65rem] text-gold">
+                        {i + 1}
+                      </span>
+                      <span className="text-sm text-ink">{step.label}</span>
+                    </Link>
+                    {i < arr.length - 1 && <ArrowRight className="h-3.5 w-3.5 shrink-0 text-ink-muted" />}
+                  </span>
+                ))}
+              </div>
             </div>
           </div>
         </div>

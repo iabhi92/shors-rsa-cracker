@@ -7,17 +7,34 @@ import { motion, useReducedMotion } from 'motion/react'
  * of small lights ("data packets") drifting across the deck. Every animated stroke uses
  * Framer Motion's `pathLength` (not raw stroke-dasharray math) so `prefers-reduced-motion`
  * degrades to the finished drawing with zero extra branching. */
+// The deck used to span 130-1070 (940 units) inside the 1200-wide viewBox -- 130px of unused
+// margin sitting empty on each side. Stretched to 40-1160 (1120 units) here, computed as a
+// fraction of the *old* span rather than hand-retyped absolute numbers, so every downstream
+// point (hangers, truss lattice, arch curves) scales together instead of drifting apart the
+// way manually re-typing dozens of coordinates would risk.
+const OLD_DECK_START = 130
+const OLD_DECK_END = 1070
+const DECK_START = 40
+const DECK_END = 1160
+const DECK_SPAN = DECK_END - DECK_START
+const toNewX = (oldX: number) => DECK_START + ((oldX - OLD_DECK_START) / (OLD_DECK_END - OLD_DECK_START)) * DECK_SPAN
+
+const SEC_START = toNewX(150)
+const SEC_END = toNewX(1050)
+const PYLON_LEFT = toNewX(160)
+const PYLON_RIGHT = toNewX(1040)
+
 export default function HarbourBridgeIllustration() {
   const reduceMotion = useReducedMotion()
   const finished = !!reduceMotion
 
-  const hangerX = [260, 340, 420, 500, 620, 700, 780, 860, 940]
+  const hangerX = [260, 340, 420, 500, 620, 700, 780, 860, 940].map(toNewX)
 
   // Sampled points along the same two arch curves used below, so the truss lattice actually
   // connects to where the arches are, not an approximation drawn separately.
-  const archYMain = (x: number) => 292 - Math.sin(((x - 130) / (1070 - 130)) * Math.PI) * 232
-  const archYSecondary = (x: number) => 292 - Math.sin(((x - 150) / (1050 - 150)) * Math.PI) * 200
-  const trussX = [190, 250, 310, 370, 430, 490, 550, 610, 670, 730, 790, 850, 910, 970, 1010]
+  const archYMain = (x: number) => 292 - Math.sin(((x - DECK_START) / DECK_SPAN) * Math.PI) * 232
+  const archYSecondary = (x: number) => 292 - Math.sin(((x - SEC_START) / (SEC_END - SEC_START)) * Math.PI) * 200
+  const trussX = [190, 250, 310, 370, 430, 490, 550, 610, 670, 730, 790, 850, 910, 970, 1010].map(toNewX)
 
   return (
     <svg
@@ -48,8 +65,8 @@ export default function HarbourBridgeIllustration() {
 
       {/* pylons */}
       {[
-        { x: 160, side: -1 },
-        { x: 1040, side: 1 },
+        { x: PYLON_LEFT, side: -1 },
+        { x: PYLON_RIGHT, side: 1 },
       ].map((p, i) => (
         <motion.g
           key={i}
@@ -70,7 +87,7 @@ export default function HarbourBridgeIllustration() {
 
       {/* main arch */}
       <motion.path
-        d="M 130 292 C 130 60, 1070 60, 1070 292"
+        d={`M ${DECK_START} 292 C ${DECK_START} 60, ${DECK_END} 60, ${DECK_END} 292`}
         fill="none"
         stroke="#e3b45e"
         strokeWidth="2.5"
@@ -80,7 +97,7 @@ export default function HarbourBridgeIllustration() {
       />
       {/* secondary, slightly lower arch line for structural depth */}
       <motion.path
-        d="M 150 292 C 150 92, 1050 92, 1050 292"
+        d={`M ${SEC_START} 292 C ${SEC_START} 92, ${SEC_END} 92, ${SEC_END} 292`}
         fill="none"
         stroke="#204a66"
         strokeWidth="1.25"
@@ -113,9 +130,9 @@ export default function HarbourBridgeIllustration() {
 
       {/* deck */}
       <motion.line
-        x1="130"
+        x1={DECK_START}
         y1="292"
-        x2="1070"
+        x2={DECK_END}
         y2="292"
         stroke="#eee8da"
         strokeWidth="2"
@@ -129,7 +146,7 @@ export default function HarbourBridgeIllustration() {
       {hangerX.map((x, i) => {
         // Arch height at this x, sampled from the same cubic-bezier shape as the main arch
         // (approximated with a parabola for the hanger endpoint -- close enough for line art).
-        const t = (x - 130) / (1070 - 130)
+        const t = (x - DECK_START) / DECK_SPAN
         const archY = 292 - Math.sin(t * Math.PI) * 232
         return (
           <motion.line
@@ -154,16 +171,16 @@ export default function HarbourBridgeIllustration() {
           <motion.circle
             r="2.6"
             fill="#e3b45e"
-            initial={{ cx: 150, opacity: 0 }}
-            animate={{ cx: [150, 1050], opacity: [0, 1, 1, 0] }}
+            initial={{ cx: SEC_START, opacity: 0 }}
+            animate={{ cx: [SEC_START, SEC_END], opacity: [0, 1, 1, 0] }}
             transition={{ duration: 7, repeat: Infinity, ease: 'linear', delay: 2.6 }}
             cy="292"
           />
           <motion.circle
             r="2.2"
             fill="#eee8da"
-            initial={{ cx: 150, opacity: 0 }}
-            animate={{ cx: [150, 1050], opacity: [0, 1, 1, 0] }}
+            initial={{ cx: SEC_START, opacity: 0 }}
+            animate={{ cx: [SEC_START, SEC_END], opacity: [0, 1, 1, 0] }}
             transition={{ duration: 7, repeat: Infinity, ease: 'linear', delay: 5.8 }}
             cy="292"
           />
