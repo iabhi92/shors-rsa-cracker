@@ -3,3 +3,6 @@ fastapi>=0.115
 uvicorn[standard]>=0.30
 python-dotenv>=1.0
 httpx>=0.27
+# Needed for backend/app/routers/ibm_live.py's real hardware submission path (see its module
+# docstring). Requires IBM_QUANTUM_API_KEY/IBM_QUANTUM_CRN set in this deployment's environment.
+qiskit-ibm-runtime>=0.48

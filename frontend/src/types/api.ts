@@ -301,6 +301,42 @@ export interface IbmHardwareResponse {
   disclaimer: string
 }
 
+// Mirrors backend/app/schemas/ibm.py's AllowedLiveA -- every a coprime with 15 whose
+// multiplicative order is automatically a power of two (see quantum/ibm_hardware.py).
+export const ALLOWED_LIVE_A_VALUES = [2, 4, 7, 8, 11, 13, 14] as const
+export type AllowedLiveA = (typeof ALLOWED_LIVE_A_VALUES)[number]
+
+export interface IbmLiveSubmitResponse {
+  run_id: string
+  a: number
+  N: number
+  n_count: number
+  r: number
+  shots: number
+  backend_name: string
+  job_id: string
+  status: 'queued'
+}
+
+export type IbmLiveStatus = 'queued' | 'running' | 'done' | 'error'
+
+export interface IbmLiveStatusResponse {
+  run_id: string
+  status: IbmLiveStatus
+  a: number
+  N: number
+  n_count: number
+  r: number
+  shots: number
+  backend_name: string
+  job_id: string
+  counts: Record<string, number> | null
+  theoretical_distribution: Record<string, number> | null
+  total_variation_distance: number | null
+  probability_mass_on_theoretically_impossible_outcomes: number | null
+  error_message: string | null
+}
+
 // --- docs ---
 export interface DocIndexEntry {
   slug: string

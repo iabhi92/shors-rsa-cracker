@@ -5,6 +5,8 @@ from backend.app.main import app
 from backend.app.rate_limit import (
     classical_attack_limiter,
     dashboard_demo_limiter,
+    ibm_hardware_global_limiter,
+    ibm_hardware_per_ip_limiter,
     rsa_keygen_limiter,
     shor_run_limiter,
 )
@@ -25,3 +27,5 @@ def _reset_rate_limiters() -> None:
     classical_attack_limiter.reset()
     shor_run_limiter.reset()
     dashboard_demo_limiter.reset()
+    ibm_hardware_per_ip_limiter.reset()
+    ibm_hardware_global_limiter.reset()

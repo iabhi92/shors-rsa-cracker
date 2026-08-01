@@ -176,7 +176,22 @@ export default function GuidePage() {
         </div>
       </Card>
 
-      <Card title="5. Where things live" className="mt-4">
+      <Card title="5. Submitting to real IBM Quantum hardware" className="mt-4">
+        <div className="flex items-start gap-3">
+          <FlaskConical className="mt-0.5 h-5 w-5 shrink-0 text-gold" />
+          <p className="text-sm text-ink-muted">
+            The <Link to="/ibm-hardware" className="text-gold underline underline-offset-2">IBM Hardware Validation</Link> page has a
+            "Run this live, right now" button that submits this project's real compiled circuit to an actual IBM
+            quantum computer, on this project's own account -- not a simulation, not the stored comparison run shown
+            above it. Real hardware jobs queue for anywhere from seconds to minutes, so the page polls for the
+            result rather than making you wait on one request; because it's spending real, shared hardware time, it's
+            capped hard (one submission per visitor per hour, a small total per day across everyone) rather than
+            left open-ended.
+          </p>
+        </div>
+      </Card>
+
+      <Card title="6. Where things live" className="mt-4">
         <div className="flex items-start gap-3">
           <Compass className="mt-0.5 h-5 w-5 shrink-0 text-gold" />
           <div className="grid gap-x-6 gap-y-3 text-sm text-ink-muted sm:grid-cols-2">

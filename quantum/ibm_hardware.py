@@ -55,6 +55,7 @@ from quantum.fast_sim import multiplicative_order
 
 if TYPE_CHECKING:
     from qiskit_ibm_runtime import QiskitRuntimeService
+    from qiskit_ibm_runtime.runtime_job_v2 import RuntimeJobV2
 
 
 def _is_power_of_two(n: int) -> bool:
@@ -162,18 +163,31 @@ def get_service() -> "QiskitRuntimeService":
     return QiskitRuntimeService(channel="ibm_cloud", token=api_key, instance=crn)
 
 
-def run_on_hardware(
+@dataclass
+class SubmittedJob:
+    """A job already accepted by IBM Quantum but not necessarily finished -- `job` is the raw
+    qiskit-ibm-runtime job handle, kept around so a caller can poll `.status()` / `.result()`
+    without blocking the request that submitted it."""
+
+    job: "RuntimeJobV2"
+    backend_name: str
+    shots: int
+
+
+def submit_to_hardware(
     a: int, N: int, n_count: int, shots: int = 4000, backend_name: str | None = None
-) -> HardwareRunResult:
-    """Transpile build_compiled_circuit(a, N, n_count) for a real backend and submit it via
-    qiskit-ibm-runtime's SamplerV2 primitive. Picks the least-busy operational backend if
+) -> SubmittedJob:
+    """Transpile build_compiled_circuit(a, N, n_count) for a real backend and hand it to
+    qiskit-ibm-runtime's SamplerV2 primitive, returning as soon as IBM Quantum has *accepted*
+    the job -- real hardware jobs can sit queued for anywhere from seconds to many minutes, so
+    this deliberately does not block on `.result()` (see run_on_hardware, which does, for the
+    offline CLI script where blocking is fine). Picks the least-busy operational backend if
     `backend_name` isn't given."""
+    from qiskit.transpiler.preset_passmanagers import generate_preset_pass_manager
     from qiskit_ibm_runtime import SamplerV2
 
     service = get_service()
     backend = service.backend(backend_name) if backend_name else service.least_busy(operational=True)
-
-    from qiskit.transpiler.preset_passmanagers import generate_preset_pass_manager
 
     qc = build_compiled_circuit(a, N, n_count)
     pm: PassManager = generate_preset_pass_manager(optimization_level=3, backend=backend)
@@ -181,8 +195,27 @@ def run_on_hardware(
 
     sampler = SamplerV2(mode=backend)
     job = sampler.run([transpiled], shots=shots)
-    result = job.result()
-    raw_counts = result[0].data.c.get_counts()
-    counts = {int(bitstring, 2): n for bitstring, n in raw_counts.items()}
+    return SubmittedJob(job=job, backend_name=backend.name, shots=shots)
 
-    return HardwareRunResult(backend_name=backend.name, job_id=job.job_id(), shots=shots, counts=counts)
+
+def counts_from_result(result: object) -> dict[int, int]:
+    """Extracts this project's int-keyed counts dict from a completed SamplerV2 job's
+    `.result()` -- shared by run_on_hardware (blocking) and the live polling endpoint
+    (non-blocking) so the bitstring-to-int convention only lives in one place."""
+    raw_counts = result[0].data.c.get_counts()  # type: ignore[index]
+    return {int(bitstring, 2): n for bitstring, n in raw_counts.items()}
+
+
+def run_on_hardware(
+    a: int, N: int, n_count: int, shots: int = 4000, backend_name: str | None = None
+) -> HardwareRunResult:
+    """Submits via submit_to_hardware and blocks until the real hardware result comes back --
+    fine for the offline CLI script (scripts/run_on_ibm_hardware.py), which has nothing else to
+    do in the meantime. The live website's submission path uses submit_to_hardware directly
+    instead, so it can return to the visitor immediately and poll separately."""
+    submitted = submit_to_hardware(a, N, n_count, shots=shots, backend_name=backend_name)
+    result = submitted.job.result()
+    counts = counts_from_result(result)
+    return HardwareRunResult(
+        backend_name=submitted.backend_name, job_id=submitted.job.job_id(), shots=submitted.shots, counts=counts
+    )

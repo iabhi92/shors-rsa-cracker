@@ -7,6 +7,7 @@ import { Card, ErrorBanner, PageHeader, Spinner, StatCard, WarningBanner } from 
 import AmplitudeView from '../components/AmplitudeView'
 import NoiseOverlayChart from '../components/NoiseOverlayChart'
 import CodePanel, { type CodeSnippet } from '../components/CodePanel'
+import LiveIbmHardwareRun from '../components/LiveIbmHardwareRun'
 import { playIbmBlip } from '../lib/sfx'
 
 // Copied verbatim from this repository's own quantum/ibm_hardware.py -- the exact module that
@@ -141,11 +142,14 @@ export default function IbmHardwarePage() {
             </p>
           </Card>
 
+          <LiveIbmHardwareRun />
+
           <Card className="mt-6">
-            <h2 className="font-medium text-ink">Run this yourself, on your own IBM Quantum account</h2>
+            <h2 className="font-medium text-ink">Or run it on your own IBM Quantum account instead</h2>
             <p className="mt-2 text-sm text-ink-muted">
-              IBM Quantum's free plan includes real hardware time -- the run(s) shown above weren't submitted from
-              anything special. Three things, in order:
+              The live button above shares this project's own account and rate limit with every visitor. IBM
+              Quantum's free plan includes real hardware time too -- if you'd rather use your own account instead of
+              waiting on the shared budget, three things, in order:
             </p>
             <ol className="mt-2 list-inside list-decimal space-y-1 text-sm text-ink-muted">
               <li>
@@ -178,9 +182,10 @@ export default function IbmHardwarePage() {
               <CodePanel stageId="run" snippets={IBM_RUN_SNIPPETS} />
             </div>
             <p className="mt-3 text-xs text-ink-muted">
-              This is the only place in the entire codebase that imports qiskit_ibm_runtime or reads these credentials -- see
-              backend/app/routers/ibm.py's own module docstring for the structural guarantee that this website's backend can never
-              submit a job itself.
+              quantum/ibm_hardware.py's get_service() is the only function in the whole codebase that reads these
+              credentials -- both the button above and this path call the exact same code, just with a different
+              IBM Cloud account and CRN behind the scenes. See backend/app/routers/ibm_live.py's own module docstring
+              for the rate limits guarding the shared, live version above.
             </p>
           </Card>
         </>

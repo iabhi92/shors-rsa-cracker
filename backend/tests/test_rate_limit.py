@@ -1,10 +1,35 @@
 """Tests for backend/app/rate_limit.py -- both the RateLimiter unit (deterministic, no real
 sleeping) and the wired-up behavior on an actual endpoint through TestClient."""
 
+from typing import cast
+
 import pytest
+from fastapi import Request
 from fastapi.testclient import TestClient
 
-from backend.app.rate_limit import RateLimiter, RateLimitExceededError
+from backend.app.rate_limit import (
+    RateLimiter,
+    RateLimitExceededError,
+    global_limiter_dependency,
+    limiter_dependency,
+)
+
+
+class _FakeClient:
+    def __init__(self, host: str) -> None:
+        self.host = host
+
+
+class _FakeRequest:
+    """Duck-types just enough of fastapi.Request (a `.client.host`) for these dependency
+    functions, which never touch anything else on the real Request object."""
+
+    def __init__(self, host: str) -> None:
+        self.client = _FakeClient(host)
+
+
+def _request(host: str) -> Request:
+    return cast(Request, _FakeRequest(host))
 
 
 def test_allows_up_to_max_requests_then_raises() -> None:
@@ -55,6 +80,27 @@ def test_rsa_keygen_endpoint_returns_429_with_retry_after(client: TestClient) ->
     assert "Retry-After" in r.headers
     assert int(r.headers["Retry-After"]) > 0
     assert "Rate limit exceeded" in r.json()["detail"]
+
+
+def test_global_limiter_dependency_shares_one_budget_across_different_ips() -> None:
+    # Unlike limiter_dependency (per client-IP), global_limiter_dependency must charge every
+    # caller against the same shared budget regardless of request.client.host -- this is what
+    # makes it suitable for guarding a real, account-wide resource (see ibm_hardware_global_limiter).
+    limiter = RateLimiter(max_requests=2, window_seconds=60)
+    dep = global_limiter_dependency(limiter)
+
+    dep(_request("1.1.1.1"))
+    dep(_request("2.2.2.2"))  # different IP, same shared budget -- this is call #2 of 2
+    with pytest.raises(RateLimitExceededError):
+        dep(_request("3.3.3.3"))  # budget already spent, regardless of IP
+
+
+def test_limiter_dependency_keys_by_client_ip_not_globally() -> None:
+    limiter = RateLimiter(max_requests=1, window_seconds=60)
+    dep = limiter_dependency(limiter)
+
+    dep(_request("1.1.1.1"))
+    dep(_request("2.2.2.2"))  # different IP -- must not be blocked by 1.1.1.1's usage
 
 
 def test_classical_attack_and_shor_run_have_separate_budgets(client: TestClient) -> None:

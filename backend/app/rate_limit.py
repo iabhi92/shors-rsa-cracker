@@ -74,6 +74,22 @@ def limiter_dependency(limiter: RateLimiter) -> Callable[[Request], None]:
     return _dep
 
 
+_GLOBAL_KEY = "global"
+
+
+def global_limiter_dependency(limiter: RateLimiter) -> Callable[[Request], None]:
+    """Same RateLimiter class, but keyed by one fixed constant instead of client IP -- every
+    caller shares a single budget. Real IBM Quantum hardware time is a shared account-wide
+    resource (unlike CPU, which is cheap and per-request), so a per-IP limit alone can't stop
+    many different visitors from collectively draining it; this caps the total regardless of
+    who's asking."""
+
+    def _dep(request: Request) -> None:
+        limiter.check(_GLOBAL_KEY)
+
+    return _dep
+
+
 # One limiter instance per expensive endpoint family -- separate budgets, so hammering the
 # classical attack lab doesn't also lock you out of RSA keygen.
 rsa_keygen_limiter = RateLimiter(max_requests=20, window_seconds=60)
@@ -84,3 +100,10 @@ shor_run_limiter = RateLimiter(max_requests=15, window_seconds=60)
 # actually trip a 429 in front of a visitor within a few seconds, without spending down the
 # budget any other page's real functionality depends on.
 dashboard_demo_limiter = RateLimiter(max_requests=5, window_seconds=15)
+
+# Real IBM Quantum hardware time is a genuinely limited, account-wide resource (not cheap CPU
+# like every other limiter above) -- two separate caps, both must pass: one visitor can't burn
+# through the whole day's global budget alone (per-IP), and the account's total real-hardware
+# exposure per day is bounded no matter how many different visitors ask (global).
+ibm_hardware_per_ip_limiter = RateLimiter(max_requests=1, window_seconds=3600)
+ibm_hardware_global_limiter = RateLimiter(max_requests=5, window_seconds=86400)

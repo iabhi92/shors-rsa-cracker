@@ -22,6 +22,7 @@ from backend.app.routers import (
     classical,
     docs,
     ibm,
+    ibm_live,
     meta,
     quantum,
     resource,
@@ -80,6 +81,7 @@ app.include_router(circuit.router, prefix="/api/circuit", tags=["circuit"])
 app.include_router(simulators.router, prefix="/api/simulators", tags=["simulators"])
 app.include_router(resource.router, prefix="/api/resource-estimate", tags=["resource"])
 app.include_router(ibm.router, prefix="/api/ibm-hardware", tags=["ibm-hardware"])
+app.include_router(ibm_live.router, prefix="/api/ibm-hardware/live", tags=["ibm-hardware-live"])
 app.include_router(docs.router, prefix="/api/docs", tags=["docs"])
 
 

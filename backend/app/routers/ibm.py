@@ -1,9 +1,9 @@
 """IBM Hardware Validation -- reads ONLY the specific, whitelisted result file(s) already
-committed to this repo. There is no code path in this router (or anywhere else in backend/)
-that imports qiskit_ibm_runtime, reads IBM_QUANTUM_API_KEY/IBM_QUANTUM_CRN, or could submit a
-new job. That's a structural guarantee, not just a policy: the capability to talk to IBM
-Quantum simply isn't imported into this process. See quantum/ibm_hardware.py (a separate,
-credentialed, CLI-only module) for the code that actually submitted the runs shown here."""
+committed to this repo. This router itself never imports qiskit_ibm_runtime or reads
+IBM_QUANTUM_API_KEY/IBM_QUANTUM_CRN; it can only serve what's already on disk. The backend as a
+whole is no longer credential-free, though: backend/app/routers/ibm_live.py is a deliberately
+separate, clearly-labeled router that DOES submit real, on-demand hardware jobs -- see its own
+module docstring for the rate limits guarding it."""
 
 import json
 from pathlib import Path
