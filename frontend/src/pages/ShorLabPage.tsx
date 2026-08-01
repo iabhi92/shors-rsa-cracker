@@ -5,7 +5,7 @@ import { Check, Copy, Download, ShieldCheck } from 'lucide-react'
 import { apiGet, apiPost } from '../api/client'
 import { useAction, useFetchOnMount } from '../hooks/useApi'
 import type { ShorBackend, ShorBackendsResponse, ShorResponse } from '../types/api'
-import { Button, Card, ErrorBanner, PageHeader, Spinner, Table, WarningBanner } from '../components/ui'
+import { Button, Card, ErrorBanner, PageHeader, Spinner, StatCard, Table, WarningBanner } from '../components/ui'
 import VaultIllustration from '../components/VaultIllustration'
 import ShorPipelineVisual from '../components/shor/ShorPipelineVisual'
 import FailureModeGallery from '../components/shor/FailureModeGallery'
@@ -70,13 +70,27 @@ export default function ShorLabPage() {
       <ShorLabIllustration />
 
       <div className="mb-6">
+        <WarningBanner>
+          N here is deliberately tiny (15–65), so the entire pipeline -- simulation, measurement, and classical
+          post-processing -- runs end to end in real time. See{' '}
+          <Link to="/resource-estimate" className="underline underline-offset-2">
+            Resource Estimation
+          </Link>{' '}
+          for what a real RSA-2048 key would actually require.
+        </WarningBanner>
+      </div>
+
+      <div className="mb-6">
         <h2 className="mb-3 font-mono text-sm font-semibold tracking-wide text-ink-muted uppercase">
-          How this actually works, step by step
+          0. Watch it work, step by step
         </h2>
         <ShorPipelineVisual allowedN={backendData?.allowed_n} N={n} onNChange={setN} aInput={aInput} onAChange={setAInput} />
       </div>
 
       <div className="mb-6">
+        <h2 className="mb-3 font-mono text-sm font-semibold tracking-wide text-ink-muted uppercase">
+          1. Pick a starting point
+        </h2>
         <FailureModeGallery
           onPick={(pickedN, pickedA) => {
             setN(pickedN)
@@ -87,6 +101,10 @@ export default function ShorLabPage() {
 
       {backends.status === 'loading' && <Spinner label="Loading available backends…" />}
       {backends.status === 'error' && <ErrorBanner message={backends.message} />}
+
+      <h2 className="mb-3 font-mono text-sm font-semibold tracking-wide text-ink-muted uppercase">
+        2. Configure and run it for real
+      </h2>
 
       {backendData && (
         <Card>
@@ -153,13 +171,28 @@ export default function ShorLabPage() {
 
       {backendData && (
         <div className="mt-6 space-y-6">
-          <BackendRace
-            n={n}
-            aInput={aInput}
-            availableBackends={(Object.keys(backendData.descriptions) as ShorBackend[]).filter((b) => !(b === 'gate_level' && gateLevelDisabled))}
-          />
-          <QuantumClassicalRace n={n} aInput={aInput} />
-          <RealHardwareCheckpoint n={n} />
+          <div>
+            <h2 className="mb-3 font-mono text-sm font-semibold tracking-wide text-ink-muted uppercase">
+              3. Compare simulator backends
+            </h2>
+            <BackendRace
+              n={n}
+              aInput={aInput}
+              availableBackends={(Object.keys(backendData.descriptions) as ShorBackend[]).filter((b) => !(b === 'gate_level' && gateLevelDisabled))}
+            />
+          </div>
+          <div>
+            <h2 className="mb-3 font-mono text-sm font-semibold tracking-wide text-ink-muted uppercase">
+              4. Quantum vs. classical, honestly
+            </h2>
+            <QuantumClassicalRace n={n} aInput={aInput} />
+          </div>
+          <div>
+            <h2 className="mb-3 font-mono text-sm font-semibold tracking-wide text-ink-muted uppercase">
+              5. Check against real hardware
+            </h2>
+            <RealHardwareCheckpoint n={n} />
+          </div>
         </div>
       )}
     </div>
@@ -288,6 +321,17 @@ function ResultView({ result, onRetry }: { result: ShorResponse; onRetry: () => 
           message={`No factors found within ${result.attempts.length} attempt(s) -- this is a known, expected occasional outcome of the algorithm's per-shot failure modes. Try again.`}
         />
       )}
+
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <StatCard label="Counting qubits used" value={result.n_count_used ?? '—'} />
+        <StatCard
+          label="Possible outcomes"
+          value={result.n_count_used != null ? (2 ** result.n_count_used).toLocaleString() : '—'}
+          hint="the state space one measurement collapses"
+        />
+        <StatCard label="Attempts taken" value={result.attempts.length} />
+        <StatCard label="Elapsed" value={`${result.elapsed_seconds.toFixed(3)}s`} />
+      </div>
 
       <Card>
         <h2 className="mb-3 font-medium text-ink">Attempt log</h2>
