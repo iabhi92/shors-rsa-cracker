@@ -7,29 +7,34 @@ import { Card, ErrorBanner, Spinner, StatCard } from '../components/ui'
 import InterferenceCanvas from '../components/InterferenceCanvas'
 import SydneyHarbourHero from '../components/home/SydneyHarbourHero'
 import TutorialClassScene from '../components/home/TutorialClassScene'
-import { AttackSurfaceSketch, BenchmarkSketch, CircuitSketch, EditorialModuleCard, HardwareSketch, OrbitSketch, WaveSketch } from '../components/home/EditorialModuleCard'
+import { AttackSurfaceSketch, EditorialModuleCard, HardwareSketch, KeySketch, MalleabilitySketch, OrbitSketch, QubitSketch } from '../components/home/EditorialModuleCard'
 import CoordinateFooter from '../components/home/CoordinateFooter'
 import { ATTACKS } from '../lib/attackSurface'
 import { DURATION, EASE_SIGNATURE } from '../lib/motion'
 
+// The real first two steps of the site's own enforced learning path (lib/learningPath.ts),
+// followed by two highlights each from Shor's Algorithm and Attacking RSA -- previously this
+// grid opened with Classical Benchmark (actually step 10 of 12) and never featured Quantum
+// Fundamentals or RSA Laboratory at all, so "Start here" didn't actually start where the site
+// itself says to start.
 const MODULES = [
   {
-    to: '/classical-benchmark',
+    to: '/quantum-fundamentals',
     number: '01',
-    title: 'Classical Benchmark',
-    description: 'See how RSA holds up against today\'s best classical algorithms.',
-    cta: 'Explore',
-    sketch: <BenchmarkSketch />,
-    accent: '#c99545',
+    title: 'Quantum Fundamentals',
+    description: 'Qubits, superposition, and entanglement -- the actual starting point, run against a real from-scratch simulator.',
+    cta: 'Start Here',
+    sketch: <QubitSketch />,
+    accent: '#8065b8',
   },
   {
-    to: '/attack-surface',
+    to: '/rsa',
     number: '02',
-    title: 'Attack Surface Map',
-    description: `${ATTACKS.length} real attacks against RSA -- key recovery, message recovery, and side-channels -- mapped against what stops each one.`,
-    cta: 'See Every Attack',
-    sketch: <AttackSurfaceSketch />,
-    accent: '#e05a4e',
+    title: 'RSA Laboratory',
+    description: 'Generate a real keypair, encrypt a message, decrypt it -- from scratch, no crypto library.',
+    cta: 'Build a Key',
+    sketch: <KeySketch />,
+    accent: '#c99545',
   },
   {
     to: '/shor',
@@ -41,31 +46,31 @@ const MODULES = [
     accent: '#8065b8',
   },
   {
-    to: '/qft',
-    number: '04',
-    title: 'QFT & Period-Finding',
-    description: "Understand the heart of Shor's algorithm -- and how it finds periods the classical world can't.",
-    cta: 'Explore',
-    sketch: <WaveSketch />,
-    accent: '#204a66',
-  },
-  {
-    to: '/circuit-explorer',
-    number: '05',
-    title: 'Circuit Explorer',
-    description: 'Inspect real quantum circuits, controlled operations, and register evolution.',
-    cta: 'View Circuits',
-    sketch: <CircuitSketch />,
-    accent: '#54c89a',
-  },
-  {
     to: '/ibm-hardware',
-    number: '06',
+    number: '04',
     title: 'Real IBM Hardware',
     description: "Submit this project's real circuit to an actual IBM quantum computer, live, on your own click -- not just a stored screenshot.",
     cta: 'Run It Live',
     sketch: <HardwareSketch />,
     accent: '#e3b45e',
+  },
+  {
+    to: '/malleability-lab',
+    number: '05',
+    title: 'Malleability & Tampering Lab',
+    description: 'Six live attacks on textbook RSA -- from ciphertext malleability to a fault that factors a normal key from one signature.',
+    cta: 'Break It',
+    sketch: <MalleabilitySketch />,
+    accent: '#e05a4e',
+  },
+  {
+    to: '/attack-surface',
+    number: '06',
+    title: 'Attack Surface Map',
+    description: `${ATTACKS.length} real attacks against RSA -- key recovery, message recovery, and side-channels -- mapped against what stops each one.`,
+    cta: 'See Every Attack',
+    sketch: <AttackSurfaceSketch />,
+    accent: '#e05a4e',
   },
 ]
 

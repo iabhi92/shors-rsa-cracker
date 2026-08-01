@@ -60,6 +60,49 @@ export function HardwareSketch() {
   )
 }
 
+export function QubitSketch() {
+  // Two tilted "orbits" crossing at a single state vector -- a superposition state pointing
+  // somewhere between the poles, not collapsed to either |0> or |1>.
+  return (
+    <svg viewBox="0 0 64 40" className="h-full w-full" aria-hidden="true">
+      <ellipse cx="32" cy="20" rx="26" ry="10" fill="none" stroke="#8065b8" strokeWidth="1.25" transform="rotate(-14 32 20)" />
+      <ellipse cx="32" cy="20" rx="26" ry="10" fill="none" stroke="#c99545" strokeWidth="1" opacity="0.5" transform="rotate(14 32 20)" />
+      <circle cx="32" cy="20" r="2.2" fill="#e3b45e" />
+      <line x1="32" y1="20" x2="50" y2="9" stroke="#e3b45e" strokeWidth="1.5" />
+      <circle cx="50" cy="9" r="1.6" fill="#e3b45e" />
+    </svg>
+  )
+}
+
+export function KeySketch() {
+  // A real key silhouette (bow, shaft, two teeth) -- distinct from the padlock used for the
+  // Malleability Lab, since this card is about generating a real keypair, not attacking one.
+  return (
+    <svg viewBox="0 0 64 40" className="h-full w-full" aria-hidden="true">
+      <circle cx="16" cy="20" r="9" fill="none" stroke="#c99545" strokeWidth="1.5" />
+      <circle cx="16" cy="20" r="3" fill="none" stroke="#c99545" strokeWidth="1.25" opacity="0.6" />
+      <line x1="25" y1="20" x2="54" y2="20" stroke="#c99545" strokeWidth="1.5" />
+      <line x1="46" y1="20" x2="46" y2="27" stroke="#c99545" strokeWidth="1.5" />
+      <line x1="54" y1="20" x2="54" y2="29" stroke="#c99545" strokeWidth="1.5" />
+    </svg>
+  )
+}
+
+export function MalleabilitySketch() {
+  // A padlock whose shackle has been pried open -- textbook RSA's missing ciphertext
+  // integrity, not a generic security icon.
+  return (
+    <svg viewBox="0 0 64 40" className="h-full w-full" aria-hidden="true">
+      <rect x="20" y="16" width="20" height="16" rx="1.5" fill="none" stroke="#8c919b" strokeWidth="1.25" />
+      <path d="M 24 16 L 24 11 a 6 6 0 0 1 12 0 L 36 15" fill="none" stroke="#8c919b" strokeWidth="1.25" />
+      <path d="M 36 12 L 43 7" stroke="#e05a4e" strokeWidth="1.5" />
+      <circle cx="43" cy="7" r="1.6" fill="#e05a4e" />
+      <circle cx="30" cy="24" r="2" fill="#e05a4e" />
+      <line x1="30" y1="24" x2="30" y2="28" stroke="#e05a4e" strokeWidth="1.5" />
+    </svg>
+  )
+}
+
 export function AttackSurfaceSketch() {
   // A crosshair on the key at center, with four converging lines from four dots colored to
   // match the Attack Surface Map's own category colors (red=key recovery, gold=message
