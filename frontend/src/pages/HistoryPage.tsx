@@ -133,6 +133,40 @@ export default function HistoryPage() {
         description="Six real, dated milestones from the idea of public-key cryptography to the standards already replacing it -- the actual timeline this project's two labs sit on either end of."
       />
 
+      {/* A short watch-first companion to the six milestones below, not a replacement for them --
+          video on one side, a tight paragraph on the other on wide screens (stacked on mobile),
+          so neither crowds out the six real, linkable, dated cards that are the actual substance
+          of this page. No autoplay: same reduced-motion-respecting posture the scroll-progress
+          line below already takes, and a visitor arriving mid-scroll shouldn't get sound/motion
+          sprung on them uninvited. */}
+      <Card className="mb-8">
+        <div className="grid gap-5 sm:grid-cols-5 sm:items-center">
+          <div className="sm:col-span-3">
+            <video
+              controls
+              preload="metadata"
+              className="w-full rounded-sm border border-line bg-navy"
+              src={`${import.meta.env.BASE_URL}rsa-history.mp4`}
+            >
+              Your browser doesn't support embedded video --{' '}
+              <a href={`${import.meta.env.BASE_URL}rsa-history.mp4`} className="text-gold underline underline-offset-2">
+                download it directly
+              </a>
+              .
+            </video>
+          </div>
+          <div className="sm:col-span-2">
+            <p className="font-mono text-xs font-semibold tracking-[0.15em] text-gold uppercase">Watch first</p>
+            <p className="mt-2 text-sm text-ink-muted">
+              A short walkthrough of the same six milestones below, start to finish: from the idea
+              of public-key cryptography in 1976 to the post-quantum standards already replacing
+              RSA today. The timeline underneath has the full detail, real links, and the exact
+              sources each date comes from.
+            </p>
+          </div>
+        </div>
+      </Card>
+
       {/* Jump-to-era chips -- real anchor links, not decoration, so the timeline is something you
           can navigate directly (e.g. straight to '1994' for the Shor's Lab context) rather than
           only ever scrolled through top to bottom. */}
