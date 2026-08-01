@@ -205,7 +205,7 @@ export default function GuidePage() {
             </div>
             <div>
               <p className="font-medium text-ink">Project</p>
-              <p className="mt-1 text-ink-muted">A live security dashboard (self-checking headers and rate limits), the honest security/limitations writeup, and this project's own markdown notes rendered directly from the repo.</p>
+              <p className="mt-1 text-ink-muted">A live security dashboard (self-checking headers and rate limits), an attack surface map tying every demonstrated attack to what it exploits and what stops it, the honest security/limitations writeup, and this project's own markdown notes rendered directly from the repo.</p>
             </div>
             <div className="sm:col-span-2">
               <p className="font-medium text-ink">Not sure where to start? Follow this order:</p>

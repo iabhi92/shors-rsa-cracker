@@ -8,6 +8,7 @@ const GuidePage = lazy(() => import('./pages/GuidePage'))
 const RsaLabPage = lazy(() => import('./pages/RsaLabPage'))
 const SecurityLabPage = lazy(() => import('./pages/SecurityLabPage'))
 const SecurityDashboardPage = lazy(() => import('./pages/SecurityDashboardPage'))
+const AttackSurfacePage = lazy(() => import('./pages/AttackSurfacePage'))
 const ClassicalAttackPage = lazy(() => import('./pages/ClassicalAttackPage'))
 const ClassicalBenchmarkPage = lazy(() => import('./pages/ClassicalBenchmarkPage'))
 const QuantumFundamentalsPage = lazy(() => import('./pages/QuantumFundamentalsPage'))
@@ -54,6 +55,7 @@ export default function App() {
           <Route path="resource-estimate" element={<LazyPage><ResourceEstimatePage /></LazyPage>} />
           <Route path="ibm-hardware" element={<LazyPage><IbmHardwarePage /></LazyPage>} />
           <Route path="security-dashboard" element={<LazyPage><SecurityDashboardPage /></LazyPage>} />
+          <Route path="attack-surface" element={<LazyPage><AttackSurfacePage /></LazyPage>} />
           <Route path="security" element={<LazyPage><DocPage forcedSlug="security" /></LazyPage>} />
           <Route path="docs" element={<LazyPage><DocsIndexPage /></LazyPage>} />
           <Route path="docs/:slug" element={<LazyPage><DocPage /></LazyPage>} />

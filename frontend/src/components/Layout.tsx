@@ -18,6 +18,7 @@ import {
   Home,
   Info,
   KeyRound,
+  Map,
   Menu,
   Radar,
   Scale,
@@ -35,7 +36,7 @@ import type { CommandItem } from './CommandPalette'
 import AmbientBackground from './AmbientBackground'
 
 /** Six groups, named and ordered to match the site's own visual identity brief -- a first-time
- * visitor can hold six words in their head, even though there are seventeen actual pages behind
+ * visitor can hold six words in their head, even though there are eighteen actual pages behind
  * them (see the command palette / `/guide` for the full list, nothing here is hidden). */
 const NAV_SECTIONS: { label: string; icon: LucideIcon; links: { to: string; label: string; icon: LucideIcon }[] }[] = [
   {
@@ -82,6 +83,7 @@ const NAV_SECTIONS: { label: string; icon: LucideIcon; links: { to: string; labe
     links: [
       { to: '/guide', label: 'How to Use This Site', icon: Compass },
       { to: '/history', label: 'History of RSA & Shor', icon: History },
+      { to: '/attack-surface', label: 'Attack Surface Map', icon: Map },
       { to: '/security-dashboard', label: 'Security Dashboard', icon: Radar },
       { to: '/security', label: 'Security & Limitations', icon: ShieldCheck },
       { to: '/docs', label: 'Documentation', icon: BookOpen },
