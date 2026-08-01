@@ -7,7 +7,7 @@ import { Card, ErrorBanner, Spinner, StatCard } from '../components/ui'
 import InterferenceCanvas from '../components/InterferenceCanvas'
 import SydneyHarbourHero from '../components/home/SydneyHarbourHero'
 import TutorialClassScene from '../components/home/TutorialClassScene'
-import { BenchmarkSketch, CircuitSketch, EditorialModuleCard, OrbitSketch, WaveSketch } from '../components/home/EditorialModuleCard'
+import { BenchmarkSketch, CircuitSketch, EditorialModuleCard, HardwareSketch, OrbitSketch, WaveSketch } from '../components/home/EditorialModuleCard'
 import CoordinateFooter from '../components/home/CoordinateFooter'
 import { DURATION, EASE_SIGNATURE } from '../lib/motion'
 
@@ -47,6 +47,15 @@ const MODULES = [
     cta: 'View Circuits',
     sketch: <CircuitSketch />,
     accent: '#54c89a',
+  },
+  {
+    to: '/ibm-hardware',
+    number: '05',
+    title: 'Real IBM Hardware',
+    description: "Submit this project's real circuit to an actual IBM quantum computer, live, on your own click -- not just a stored screenshot.",
+    cta: 'Run It Live',
+    sketch: <HardwareSketch />,
+    accent: '#e3b45e',
   },
 ]
 
@@ -123,7 +132,7 @@ export default function HomePage() {
           variants={{ hidden: {}, show: { transition: { staggerChildren: 0.08 } } }}
         >
           <h2 className="mb-4 font-mono text-sm font-semibold tracking-wide text-ink-muted uppercase">Start here</h2>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
             {MODULES.map((mod) => (
               <motion.div key={mod.to} variants={fadeUp} transition={{ duration: DURATION.fast, ease: EASE_SIGNATURE }}>
                 <EditorialModuleCard {...mod} />

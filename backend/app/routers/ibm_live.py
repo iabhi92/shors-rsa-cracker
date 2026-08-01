@@ -18,7 +18,8 @@ limiter state -- a backend restart loses track of any run still in progress; the
 just need to resubmit."""
 
 import uuid
-from dataclasses import dataclass
+from concurrent.futures import Future, ThreadPoolExecutor
+from dataclasses import dataclass, field
 
 from fastapi import APIRouter, Request
 
@@ -51,6 +52,16 @@ _SHOTS = 1000
 _QUEUED_STATUSES = {"INITIALIZING", "QUEUED", "VALIDATING"}
 _ERROR_STATUSES = {"ERROR", "CANCELLED"}
 
+# Fetching a completed job's actual result payload from IBM's API is a real network call that
+# can occasionally take a while -- long enough, in production, to exceed Render/Cloudflare's
+# own proxy timeout on the /status request that first observes the job is DONE. That made a
+# genuinely successful hardware run look like "could not reach the backend" to a visitor, at
+# exactly the moment it finished, even though the job had completed fine on IBM's side. Fetching
+# it in a background thread instead means every single /status request returns almost
+# immediately regardless of how slow that fetch is -- the poll that kicks it off reports
+# "running" and returns right away; a later poll picks up the finished result once it's ready.
+_RESULT_FETCH_POOL = ThreadPoolExecutor(max_workers=4)
+
 
 @dataclass
 class _RunState:
@@ -60,6 +71,9 @@ class _RunState:
     # Cached once the job reaches a final state, so repeated polls after completion don't
     # re-fetch/re-parse the same result from IBM's API on every tick.
     finished: IbmLiveStatusResponse | None = None
+    # Set the first time a poll observes the job is DONE; subsequent polls just check whether
+    # it's finished yet instead of each blocking on their own separate job.result() call.
+    result_future: Future | None = field(default=None, repr=False)
 
 
 _RUNS: dict[str, _RunState] = {}
@@ -136,8 +150,15 @@ def status(run_id: str) -> IbmLiveStatusResponse:
     }
 
     if job_status_name == "DONE":
+        if state.result_future is None:
+            state.result_future = _RESULT_FETCH_POOL.submit(job.result)
+        if not state.result_future.done():
+            # The fetch is in flight on a background thread -- report "running" so the frontend
+            # keeps polling, rather than this request itself waiting on it.
+            return IbmLiveStatusResponse(status="running", **base)
+
         try:
-            result = job.result()
+            result = state.result_future.result()
             counts = counts_from_result(result)
         except Exception as exc:  # noqa: BLE001 -- real hardware/network failures here are genuinely unpredictable
             response = IbmLiveStatusResponse(status="error", error_message=str(exc), **base)

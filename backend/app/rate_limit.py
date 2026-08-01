@@ -105,5 +105,5 @@ dashboard_demo_limiter = RateLimiter(max_requests=5, window_seconds=15)
 # like every other limiter above) -- two separate caps, both must pass: one visitor can't burn
 # through the whole day's global budget alone (per-IP), and the account's total real-hardware
 # exposure per day is bounded no matter how many different visitors ask (global).
-ibm_hardware_per_ip_limiter = RateLimiter(max_requests=1, window_seconds=3600)
-ibm_hardware_global_limiter = RateLimiter(max_requests=5, window_seconds=86400)
+ibm_hardware_per_ip_limiter = RateLimiter(max_requests=3, window_seconds=3600)
+ibm_hardware_global_limiter = RateLimiter(max_requests=15, window_seconds=86400)

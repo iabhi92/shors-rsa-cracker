@@ -5,14 +5,21 @@ by a chosen factor) and block substitution (an attacker who never sees d can spl
 self-forged block into an intercepted multi-block ciphertext, undetected). Both reuse this
 project's real rsa/core.py primitives; nothing here is a mocked or precomputed result."""
 
+import secrets
+
 from fastapi import APIRouter, Depends
 
+from attacker.crt_fault import crt_fault_attack, generate_crt_fault_scenario
 from attacker.parity_oracle import recover_via_parity_oracle
 from attacker.timing_oracle import TimingComparison, measure_oaep_timing, measure_pkcs7_timing
 from attacker.wiener import generate_wiener_vulnerable_keypair, wiener_attack
 from backend.app.errors import AppError
 from backend.app.rate_limit import dashboard_demo_limiter, limiter_dependency, rsa_keygen_limiter
 from backend.app.schemas.security_demo import (
+    CrtFaultAttackRequest,
+    CrtFaultAttackResponse,
+    CrtFaultScenarioRequest,
+    CrtFaultScenarioResponse,
     MalleabilityRequest,
     MalleabilityResponse,
     OaepKeygenResponse,
@@ -125,6 +132,46 @@ def wiener_attack_endpoint(req: WienerAttackRequest) -> WienerAttackResponse:
         recovered_q=str(result.recovered_q) if result.recovered_q is not None else None,
         convergents_tried=result.convergents_tried,
         total_convergents=result.total_convergents,
+    )
+
+
+@router.post("/crt-fault-scenario", response_model=CrtFaultScenarioResponse, dependencies=[Depends(limiter_dependency(rsa_keygen_limiter))])
+def crt_fault_scenario(req: CrtFaultScenarioRequest) -> CrtFaultScenarioResponse:
+    """A completely ordinary, unweakened RSA keypair (see attacker/crt_fault.py's own module
+    docstring for why this attack doesn't need a special key at all), signed twice: once
+    correctly, once with a single fault injected into a randomly-chosen CRT branch -- simulating
+    exactly what a real voltage-glitch/laser-fault attack against signing hardware produces."""
+    kp = generate_keypair(req.bits)
+    message = secrets.randbelow(kp.public.n)
+    scenario = generate_crt_fault_scenario(kp, message)
+    return CrtFaultScenarioResponse(
+        n=str(kp.public.n),
+        e=str(kp.public.e),
+        d=str(kp.private.d),
+        p=str(kp.p),
+        q=str(kp.q),
+        n_bits=kp.public.n.bit_length(),
+        message=str(scenario.message),
+        correct_signature=str(scenario.correct_signature),
+        faulty_signature=str(scenario.faulty_signature),
+        faulted_branch=scenario.faulted_branch,
+    )
+
+
+@router.post("/crt-fault-attack", response_model=CrtFaultAttackResponse)
+def crt_fault_attack_endpoint(req: CrtFaultAttackRequest) -> CrtFaultAttackResponse:
+    """Recovers a full factorization of n from nothing but the public key, the signed message,
+    and one faulty signature -- no d, no p, no q anywhere in the request. See
+    attacker/crt_fault.py's own module docstring for the gcd math."""
+    try:
+        n, e, message, faulty_signature = int(req.n), int(req.e), int(req.message), int(req.faulty_signature)
+    except ValueError as exc:
+        raise AppError("n, e, message, and faulty_signature must all be decimal integers") from exc
+    result = crt_fault_attack(n, e, message, faulty_signature)
+    return CrtFaultAttackResponse(
+        succeeded=result.succeeded,
+        recovered_p=str(result.recovered_p) if result.recovered_p is not None else None,
+        recovered_q=str(result.recovered_q) if result.recovered_q is not None else None,
     )
 
 

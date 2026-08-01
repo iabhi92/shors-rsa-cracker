@@ -1,3 +1,5 @@
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 from backend.app.limits import RSA_MAX_MESSAGE_BYTES
@@ -175,6 +177,50 @@ class WienerAttackResponse(BaseModel):
     recovered_q: str | None
     convergents_tried: int
     total_convergents: int
+
+
+class CrtFaultScenarioRequest(BaseModel):
+    bits: int = Field(
+        128,
+        ge=32,
+        le=256,
+        description="Modulus size -- a completely ordinary key at this size is just as vulnerable as a real one; bigger only makes the demo feel more realistic, it isn't required for the attack to work",
+    )
+
+
+class CrtFaultScenarioResponse(BaseModel):
+    """n/e/d/p/q/message/signatures as decimal strings for the same reason as
+    WienerKeygenResponse -- real key- and message-sized values a JS float64 can't represent
+    exactly. Unlike Wiener's attack, this key is NOT specially weakened in any way -- see
+    attacker/crt_fault.py's own module docstring for why a completely ordinary key is already
+    vulnerable to this attack, given a real hardware fault during CRT signing."""
+
+    n: str
+    e: str
+    d: str
+    p: str
+    q: str
+    n_bits: int
+    message: str
+    correct_signature: str
+    faulty_signature: str
+    faulted_branch: Literal["p", "q"]
+
+
+class CrtFaultAttackRequest(BaseModel):
+    # Strings in, not int: real key/message-sized values. Deliberately NOT d, p, or q -- the
+    # whole point of this attack is that it runs from exactly what a real attacker holding a
+    # faulted signature would have: the public key, the message, and the bad signature.
+    n: str
+    e: str
+    message: str
+    faulty_signature: str
+
+
+class CrtFaultAttackResponse(BaseModel):
+    succeeded: bool
+    recovered_p: str | None
+    recovered_q: str | None
 
 
 class TimingOracleRequest(BaseModel):

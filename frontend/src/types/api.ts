@@ -77,6 +77,23 @@ export interface WienerAttackResponse {
   convergents_tried: number
   total_convergents: number
 }
+export interface CrtFaultScenarioResponse {
+  n: string
+  e: string
+  d: string
+  p: string
+  q: string
+  n_bits: number
+  message: string
+  correct_signature: string
+  faulty_signature: string
+  faulted_branch: 'p' | 'q'
+}
+export interface CrtFaultAttackResponse {
+  succeeded: boolean
+  recovered_p: string | null
+  recovered_q: string | null
+}
 // n/e/d/p/q/phi are decimal strings for the same reason as MalleabilityResponse above -- this
 // is a real ~1024-bit key, unlike every other KeygenResponse on this site.
 export interface OaepKeygenResponse {

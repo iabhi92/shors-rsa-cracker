@@ -44,6 +44,22 @@ export function CircuitSketch() {
   )
 }
 
+export function HardwareSketch() {
+  return (
+    <svg viewBox="0 0 64 40" className="h-full w-full" aria-hidden="true">
+      <rect x="20" y="10" width="24" height="20" fill="none" stroke="#c99545" strokeWidth="1.5" />
+      <line x1="8" y1="14" x2="20" y2="14" stroke="#8c919b" strokeWidth="1" opacity="0.6" />
+      <line x1="8" y1="20" x2="20" y2="20" stroke="#8c919b" strokeWidth="1" opacity="0.6" />
+      <line x1="8" y1="26" x2="20" y2="26" stroke="#8c919b" strokeWidth="1" opacity="0.6" />
+      <line x1="44" y1="14" x2="56" y2="14" stroke="#8c919b" strokeWidth="1" opacity="0.6" />
+      <line x1="44" y1="20" x2="56" y2="20" stroke="#8c919b" strokeWidth="1" opacity="0.6" />
+      <line x1="44" y1="26" x2="56" y2="26" stroke="#8c919b" strokeWidth="1" opacity="0.6" />
+      <circle cx="32" cy="20" r="7" fill="none" stroke="#e3b45e" strokeWidth="1" opacity="0.5" />
+      <circle cx="32" cy="20" r="3" fill="#e3b45e" />
+    </svg>
+  )
+}
+
 export function EditorialModuleCard({
   to,
   number,

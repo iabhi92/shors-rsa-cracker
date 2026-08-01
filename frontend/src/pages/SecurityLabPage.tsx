@@ -9,6 +9,7 @@ import { Button, Card, CodeBlock, ErrorBanner, PageHeader, WarningBanner } from 
 import CodePanel, { type CodeSnippet } from '../components/CodePanel'
 import ParityOracleAttack from '../components/security/ParityOracleAttack'
 import WienerAttackDemo from '../components/security/WienerAttackDemo'
+import CrtFaultInjectionDemo from '../components/security/CrtFaultInjectionDemo'
 import { playKeygen, playTamper } from '../lib/sfx'
 
 // Copied verbatim from this repository's own backend/app/routers/security_demo.py -- the exact
@@ -191,6 +192,7 @@ export default function SecurityLabPage() {
       <PaddingCaseStudySection keyPair={key} onSucceed={onPaddingSucceed} />
       <ParityOracleAttack keyPair={key} />
       <WienerAttackDemo />
+      <CrtFaultInjectionDemo />
       <Scorecard completed={completed} />
     </div>
   )

@@ -4,6 +4,7 @@ with a fake job whose .status()/.result() are fully under the test's control, so
 the real request/response/state-machine logic without spending real hardware time or needing
 real credentials in CI."""
 
+import time
 from dataclasses import dataclass
 
 import pytest
@@ -49,6 +50,7 @@ class _FakeJob:
     counts: dict[str, int]
     _job_id: str = "fake-job-123"
     _calls: int = 0
+    result_delay_s: float = 0.0
 
     def status(self) -> _FakeStatus:
         i = min(self._calls, len(self.statuses) - 1)
@@ -59,6 +61,8 @@ class _FakeJob:
         return self._job_id
 
     def result(self) -> _FakeResult:
+        if self.result_delay_s:
+            time.sleep(self.result_delay_s)
         return _FakeResult(self.counts)
 
 
@@ -97,9 +101,18 @@ def test_submit_returns_queued_and_status_progresses_to_done(client: TestClient,
     second = client.get(f"/api/ibm-hardware/live/status/{run_id}")
     assert second.json()["status"] == "running"
 
-    third = client.get(f"/api/ibm-hardware/live/status/{run_id}")
-    done = third.json()
-    assert done["status"] == "done"
+    # The job's real result fetch now happens on a background thread (see ibm_live.py's own
+    # comment on why: a slow job.result() call must never block the HTTP request itself), so
+    # the poll that first observes "DONE" may report "running" for one more round while that
+    # background fetch finishes -- poll a few more times rather than assuming a fixed count.
+    done = None
+    for _ in range(20):
+        resp = client.get(f"/api/ibm-hardware/live/status/{run_id}").json()
+        if resp["status"] == "done":
+            done = resp
+            break
+        time.sleep(0.05)
+    assert done is not None, "job never reached 'done' status"
     assert done["total_variation_distance"] == pytest.approx(0.0, abs=1e-9)
     assert done["counts"] == {"0": 250, "2": 250, "4": 250, "6": 250}
 
@@ -115,6 +128,36 @@ def test_status_unknown_run_id_404s(client: TestClient) -> None:
     assert r.status_code == 404
 
 
+def test_a_slow_result_fetch_never_blocks_the_status_request(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    # Regression test for a real production bug: job.result() used to be called synchronously
+    # inside the request handler, so a slow real-hardware result fetch could exceed the
+    # deployment's own proxy timeout, making a genuinely successful run look like "could not
+    # reach the backend" to a visitor. It must now run on a background thread instead -- this
+    # asserts the /status request returns almost immediately even while result() is still
+    # "in flight" (here, deliberately slower than any reasonable request timeout).
+    job = _FakeJob(statuses=["DONE"], counts={"0": 1000}, result_delay_s=2.0)
+    _patch_submit(monkeypatch, job)
+
+    run_id = client.post("/api/ibm-hardware/live/submit", json={"a": 7}).json()["run_id"]
+
+    start = time.monotonic()
+    first = client.get(f"/api/ibm-hardware/live/status/{run_id}")
+    elapsed = time.monotonic() - start
+
+    assert elapsed < 1.0, f"the request blocked on the slow result() call ({elapsed:.2f}s)"
+    assert first.json()["status"] == "running"  # the background fetch is still in flight
+
+    done = None
+    for _ in range(60):
+        resp = client.get(f"/api/ibm-hardware/live/status/{run_id}").json()
+        if resp["status"] == "done":
+            done = resp
+            break
+        time.sleep(0.1)
+    assert done is not None, "job never reached 'done' status once the background fetch finished"
+    assert done["counts"] == {"0": 1000}
+
+
 def test_submit_returns_400_when_hardware_not_configured(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
     # Deliberately not 503 -- see ibm_live.py's own comment on why: the frontend auto-retries
     # 502/503/504 as a Render cold-start, which would hide a real missing-credential error
@@ -127,14 +170,18 @@ def test_submit_returns_400_when_hardware_not_configured(client: TestClient, mon
     assert r.status_code == 400
 
 
-def test_per_ip_limit_blocks_a_second_submission(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_per_ip_limit_blocks_submissions_past_its_budget(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    from backend.app.rate_limit import ibm_hardware_per_ip_limiter
+
     job = _FakeJob(statuses=["QUEUED"], counts={})
     _patch_submit(monkeypatch, job)
 
-    first = client.post("/api/ibm-hardware/live/submit", json={"a": 7})
-    assert first.status_code == 200
-    second = client.post("/api/ibm-hardware/live/submit", json={"a": 8})
-    assert second.status_code == 429
+    for _ in range(ibm_hardware_per_ip_limiter.max_requests):
+        r = client.post("/api/ibm-hardware/live/submit", json={"a": 7})
+        assert r.status_code == 200
+
+    exhausted = client.post("/api/ibm-hardware/live/submit", json={"a": 8})
+    assert exhausted.status_code == 429
 
 
 def test_job_ending_in_error_status_is_reported_as_error(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:

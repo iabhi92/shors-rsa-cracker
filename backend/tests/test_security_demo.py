@@ -195,6 +195,49 @@ def test_wiener_keygen_rejects_bits_outside_range(client: TestClient) -> None:
     assert client.post("/api/security-demo/wiener-keygen", json={"bits": 4096}).status_code == 422
 
 
+def test_crt_fault_attack_recovers_the_full_factorization(client: TestClient) -> None:
+    scenario = client.post("/api/security-demo/crt-fault-scenario", json={"bits": 64}).json()
+    assert scenario["faulted_branch"] in ("p", "q")
+    assert scenario["correct_signature"] != scenario["faulty_signature"]
+
+    r = client.post(
+        "/api/security-demo/crt-fault-attack",
+        json={"n": scenario["n"], "e": scenario["e"], "message": scenario["message"], "faulty_signature": scenario["faulty_signature"]},
+    )
+    assert r.status_code == 200
+    body = r.json()
+    assert body["succeeded"] is True
+    assert {body["recovered_p"], body["recovered_q"]} == {scenario["p"], scenario["q"]}
+    # The attack request itself never included d, p, or q -- only the public key, the message,
+    # and the faulty signature, exactly what a real attacker holding a glitched signature has.
+
+
+def test_crt_fault_attack_fails_gracefully_on_the_correct_unfaulted_signature(client: TestClient) -> None:
+    scenario = client.post("/api/security-demo/crt-fault-scenario", json={"bits": 64}).json()
+    r = client.post(
+        "/api/security-demo/crt-fault-attack",
+        json={"n": scenario["n"], "e": scenario["e"], "message": scenario["message"], "faulty_signature": scenario["correct_signature"]},
+    )
+    assert r.status_code == 200
+    body = r.json()
+    assert body["succeeded"] is False
+    assert body["recovered_p"] is None
+    assert body["recovered_q"] is None
+
+
+def test_crt_fault_attack_rejects_non_numeric_input(client: TestClient) -> None:
+    r = client.post(
+        "/api/security-demo/crt-fault-attack",
+        json={"n": "not-a-number", "e": "65537", "message": "1", "faulty_signature": "1"},
+    )
+    assert r.status_code == 400
+
+
+def test_crt_fault_scenario_rejects_bits_outside_range(client: TestClient) -> None:
+    assert client.post("/api/security-demo/crt-fault-scenario", json={"bits": 8}).status_code == 422
+    assert client.post("/api/security-demo/crt-fault-scenario", json={"bits": 4096}).status_code == 422
+
+
 def test_parity_oracle_attack_recovers_the_real_message(client: TestClient) -> None:
     kg = client.post("/api/rsa/keygen", json={"bits": 20}).json()
     n, e, d = kg["n"], kg["e"], kg["d"]

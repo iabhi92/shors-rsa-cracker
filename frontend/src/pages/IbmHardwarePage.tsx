@@ -55,8 +55,16 @@ export default function IbmHardwarePage() {
     <div className="mx-auto max-w-4xl">
       <PageHeader
         title="Real IBM Quantum Hardware Validation"
-        description="Stored results from an actual run on real IBM quantum hardware -- not a simulator agreeing with itself."
+        description="Submit this project's real circuit to an actual IBM quantum computer yourself, right now -- not a simulator agreeing with itself, and not just a stored screenshot of somebody else's run."
       />
+
+      <LiveIbmHardwareRun />
+
+      <h2 className="mt-8 font-display text-lg font-semibold text-ink">Two independent stored runs, for a fixed reference point</h2>
+      <p className="mt-1 text-sm text-ink-muted">
+        Every live run above is genuinely new. These two are frozen, already-documented runs kept around as a fixed
+        comparison point (see <Link to="/docs/real-hardware-validation" className="text-gold underline underline-offset-2">the full write-up</Link>).
+      </p>
 
       {results.status === 'loading' && <Spinner label="Loading stored results…" />}
       {results.status === 'error' && <ErrorBanner message={results.message} />}
@@ -142,14 +150,12 @@ export default function IbmHardwarePage() {
             </p>
           </Card>
 
-          <LiveIbmHardwareRun />
-
           <Card className="mt-6">
             <h2 className="font-medium text-ink">Or run it on your own IBM Quantum account instead</h2>
             <p className="mt-2 text-sm text-ink-muted">
-              The live button above shares this project's own account and rate limit with every visitor. IBM
-              Quantum's free plan includes real hardware time too -- if you'd rather use your own account instead of
-              waiting on the shared budget, three things, in order:
+              The live button at the top of this page shares this project's own account and rate limit with every
+              visitor. IBM Quantum's free plan includes real hardware time too -- if you'd rather use your own
+              account instead of waiting on the shared budget, three things, in order:
             </p>
             <ol className="mt-2 list-inside list-decimal space-y-1 text-sm text-ink-muted">
               <li>
