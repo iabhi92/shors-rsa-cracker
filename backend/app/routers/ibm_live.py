@@ -10,16 +10,22 @@ exposure is bounded no matter how many different visitors ask -- unlike the CPU 
 other endpoints spend, IBM Quantum hardware time is a shared, genuinely limited account
 resource.
 
-Real jobs can queue for anywhere from seconds to many minutes, so /submit returns as soon as
-IBM Quantum has *accepted* the job (see quantum.ibm_hardware.submit_to_hardware) rather than
-blocking the request -- a separate /status/{run_id} endpoint is polled from the frontend. The
-in-flight qiskit job handles are held in an in-memory dict, so -- like rate_limit.py's own
-limiter state -- a backend restart loses track of any run still in progress; the visitor would
-just need to resubmit."""
+Every real network call to IBM Quantum happens on a background thread, never inside the request
+that triggered it -- this took two attempts to get right. The first version only backgrounded
+job.result() (fetching a finished job's actual measurement counts), reasoning that submission
+itself -- picking a backend, transpiling, handing the circuit to SamplerV2.run() -- returns
+quickly since it only *starts* the job. In production that assumption broke: authenticating with
+IBM Cloud and querying its API for the least-busy backend are themselves real network calls that
+can occasionally run long, and when they did, /submit itself blocked long enough to exceed
+Render/Cloudflare's own proxy timeout -- indistinguishable, from the visitor's browser, from the
+backend being down. Both submission and result-fetching now run on background threads; /submit
+returns almost immediately with status "submitting", and /status/{run_id} is polled until the
+background submission (then the background result fetch) each resolve."""
 
 import uuid
 from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import dataclass, field
+from typing import Any
 
 from fastapi import APIRouter, Request
 
@@ -49,31 +55,31 @@ _N = 15
 _N_COUNT = 3
 _SHOTS = 1000
 
-_QUEUED_STATUSES = {"INITIALIZING", "QUEUED", "VALIDATING"}
+# The real, complete set of strings qiskit_ibm_runtime.RuntimeJobV2.status() can return (see
+# this module's own comment above job.status() for how that was confirmed against the actual
+# installed library's source, not assumed).
+_QUEUED_STATUSES = {"INITIALIZING", "QUEUED"}
 _ERROR_STATUSES = {"ERROR", "CANCELLED"}
 
-# Fetching a completed job's actual result payload from IBM's API is a real network call that
-# can occasionally take a while -- long enough, in production, to exceed Render/Cloudflare's
-# own proxy timeout on the /status request that first observes the job is DONE. That made a
-# genuinely successful hardware run look like "could not reach the backend" to a visitor, at
-# exactly the moment it finished, even though the job had completed fine on IBM's side. Fetching
-# it in a background thread instead means every single /status request returns almost
-# immediately regardless of how slow that fetch is -- the poll that kicks it off reports
-# "running" and returns right away; a later poll picks up the finished result once it's ready.
-_RESULT_FETCH_POOL = ThreadPoolExecutor(max_workers=4)
+# One shared pool for both the (rare, one-time) submission call and the (also one-time) result
+# fetch per run -- neither is CPU-bound, both just wait on IBM's API, so a handful of worker
+# threads comfortably covers many runs in flight at once.
+_BACKGROUND_POOL = ThreadPoolExecutor(max_workers=8)
 
 
 @dataclass
 class _RunState:
-    submitted: SubmittedJob
     a: int
     r: int
+    # The entire submit_to_hardware() call -- auth, backend selection, transpile, job submit --
+    # running on a background thread. Not done yet means /status reports "submitting".
+    submit_future: "Future[SubmittedJob]"
     # Cached once the job reaches a final state, so repeated polls after completion don't
     # re-fetch/re-parse the same result from IBM's API on every tick.
     finished: IbmLiveStatusResponse | None = None
     # Set the first time a poll observes the job is DONE; subsequent polls just check whether
     # it's finished yet instead of each blocking on their own separate job.result() call.
-    result_future: Future | None = field(default=None, repr=False)
+    result_future: "Future[object] | None" = field(default=None, repr=False)
 
 
 _RUNS: dict[str, _RunState] = {}
@@ -100,28 +106,10 @@ def submit(req: IbmLiveSubmitRequest, request: Request) -> IbmLiveSubmitResponse
     global_limiter_dependency(ibm_hardware_global_limiter)(request)
 
     r = multiplicative_order(req.a, _N)
-    try:
-        submitted = submit_to_hardware(req.a, _N, _N_COUNT, shots=_SHOTS)
-    except RuntimeError as exc:
-        # get_service() raises RuntimeError if IBM_QUANTUM_API_KEY/CRN aren't configured on
-        # this deployment -- a real, permanent "not set up" state, not this endpoint's fault.
-        # Deliberately not 503: the frontend API client auto-retries 502/503/504 with backoff
-        # (Render's free tier cold-starts behind those exact codes), which would make a missing
-        # credential look like a slow wake-up for ~50s instead of surfacing immediately.
-        raise AppError(str(exc), status_code=400) from exc
-
     run_id = uuid.uuid4().hex
-    _RUNS[run_id] = _RunState(submitted=submitted, a=req.a, r=r)
-    return IbmLiveSubmitResponse(
-        run_id=run_id,
-        a=req.a,
-        N=_N,
-        n_count=_N_COUNT,
-        r=r,
-        shots=_SHOTS,
-        backend_name=submitted.backend_name,
-        job_id=submitted.job.job_id(),
-    )
+    submit_future = _BACKGROUND_POOL.submit(submit_to_hardware, req.a, _N, _N_COUNT, shots=_SHOTS)
+    _RUNS[run_id] = _RunState(a=req.a, r=r, submit_future=submit_future)
+    return IbmLiveSubmitResponse(run_id=run_id, a=req.a, N=_N, n_count=_N_COUNT, r=r, shots=_SHOTS)
 
 
 @router.get("/status/{run_id}", response_model=IbmLiveStatusResponse)
@@ -135,23 +123,39 @@ def status(run_id: str) -> IbmLiveStatusResponse:
     if state.finished is not None:
         return state.finished
 
-    job = state.submitted.job
-    job_status_name = job.status().name
+    base_partial: dict[str, Any] = {"run_id": run_id, "a": state.a, "N": _N, "n_count": _N_COUNT, "r": state.r, "shots": _SHOTS}
 
-    base = {
-        "run_id": run_id,
-        "a": state.a,
-        "N": _N,
-        "n_count": _N_COUNT,
-        "r": state.r,
-        "shots": state.submitted.shots,
-        "backend_name": state.submitted.backend_name,
-        "job_id": job.job_id(),
-    }
+    if not state.submit_future.done():
+        return IbmLiveStatusResponse(status="submitting", **base_partial)
+
+    try:
+        submitted = state.submit_future.result()
+    except RuntimeError as exc:
+        # get_service() raises RuntimeError if IBM_QUANTUM_API_KEY/CRN aren't configured on this
+        # deployment -- a real, permanent "not set up" state, discovered once the background
+        # submission actually runs rather than synchronously inside /submit.
+        response = IbmLiveStatusResponse(status="error", error_message=str(exc), **base_partial)
+        state.finished = response
+        return response
+    except Exception as exc:  # noqa: BLE001 -- real IBM Cloud/network failures here are genuinely unpredictable
+        response = IbmLiveStatusResponse(status="error", error_message=str(exc), **base_partial)
+        state.finished = response
+        return response
+
+    job = submitted.job
+    # qiskit_ibm_runtime.RuntimeJobV2.status() returns a plain string ("QUEUED", "RUNNING",
+    # "DONE", "CANCELLED", "ERROR", "INITIALIZING"), not an enum with a .name attribute -- that
+    # was a real bug caught live against actual IBM hardware (a 500 on every /status poll once
+    # a real job existed): confirmed by reading qiskit_ibm_runtime.runtime_job_v2's own source,
+    # where JobStatus is defined as Literal["INITIALIZING", "QUEUED", "RUNNING", "CANCELLED",
+    # "DONE", "ERROR"], not the unrelated qiskit.providers.jobstatus.JobStatus enum.
+    job_status_name = job.status()
+
+    base = {**base_partial, "backend_name": submitted.backend_name, "job_id": job.job_id()}
 
     if job_status_name == "DONE":
         if state.result_future is None:
-            state.result_future = _RESULT_FETCH_POOL.submit(job.result)
+            state.result_future = _BACKGROUND_POOL.submit(job.result)
         if not state.result_future.done():
             # The fetch is in flight on a background thread -- report "running" so the frontend
             # keeps polling, rather than this request itself waiting on it.
@@ -167,7 +171,7 @@ def status(run_id: str) -> IbmLiveStatusResponse:
 
         theory = _theoretical_distribution(state.a, _N, _N_COUNT)
         dim = 2**_N_COUNT
-        measured_probs = {k: v / state.submitted.shots for k, v in counts.items()}
+        measured_probs = {k: v / _SHOTS for k, v in counts.items()}
         tvd = 0.5 * sum(abs(measured_probs.get(x, 0.0) - theory.get(x, 0.0)) for x in range(dim))
         leaked = sum(v for k, v in measured_probs.items() if k not in theory)
 

@@ -1,6 +1,6 @@
 {
-  "test_count": 397,
+  "test_count": 398,
   "generated_by": "python -m pytest tests backend/tests --collect-only -q",
-  "generated_at_utc": "2026-08-02T12:00:00Z",
+  "generated_at_utc": "2026-08-02T13:00:00Z",
   "note": "Precomputed rather than run by the web backend at request/startup time -- same pattern as data/classical_benchmark.csv. Regenerate by re-running the collect-only command above and updating this file after adding/removing tests."
 }

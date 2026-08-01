@@ -330,12 +330,10 @@ export interface IbmLiveSubmitResponse {
   n_count: number
   r: number
   shots: number
-  backend_name: string
-  job_id: string
-  status: 'queued'
+  status: 'submitting'
 }
 
-export type IbmLiveStatus = 'queued' | 'running' | 'done' | 'error'
+export type IbmLiveStatus = 'submitting' | 'queued' | 'running' | 'done' | 'error'
 
 export interface IbmLiveStatusResponse {
   run_id: string
@@ -345,8 +343,9 @@ export interface IbmLiveStatusResponse {
   n_count: number
   r: number
   shots: number
-  backend_name: string
-  job_id: string
+  // null only while status === 'submitting' -- the backend hasn't actually been picked yet.
+  backend_name: string | null
+  job_id: string | null
   counts: Record<string, number> | null
   theoretical_distribution: Record<string, number> | null
   total_variation_distance: number | null

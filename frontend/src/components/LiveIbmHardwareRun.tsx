@@ -21,7 +21,6 @@ type Phase = 'idle' | 'submitting' | 'polling' | 'done' | 'error'
 export default function LiveIbmHardwareRun() {
   const [a, setA] = useState<number>(7)
   const [phase, setPhase] = useState<Phase>('idle')
-  const [submitInfo, setSubmitInfo] = useState<IbmLiveSubmitResponse | null>(null)
   const [status, setStatus] = useState<IbmLiveStatusResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [elapsedMs, setElapsedMs] = useState(0)
@@ -72,7 +71,6 @@ export default function LiveIbmHardwareRun() {
     setElapsedMs(0)
     try {
       const res = await apiPost<IbmLiveSubmitResponse>('/ibm-hardware/live/submit', { a })
-      setSubmitInfo(res)
       setPhase('polling')
       playIbmBlip()
       pollRef.current = setTimeout(() => void poll(res.run_id), POLL_INTERVAL_MS)
@@ -87,6 +85,8 @@ export default function LiveIbmHardwareRun() {
 
   const resultAsRun =
     status?.status === 'done' &&
+    status.backend_name != null &&
+    status.job_id != null &&
     status.counts &&
     status.theoretical_distribution &&
     status.total_variation_distance != null &&
@@ -162,8 +162,11 @@ export default function LiveIbmHardwareRun() {
           />
           <span className="font-mono text-sm text-ink-muted">
             {phase === 'submitting' && 'Submitting to IBM Quantum...'}
-            {phase === 'polling' && status && `Status: ${status.status}${status.backend_name ? ` on ${status.backend_name}` : ''} -- job ${status.job_id}`}
-            {phase === 'polling' && !status && submitInfo && `Status: queued on ${submitInfo.backend_name} -- job ${submitInfo.job_id}`}
+            {phase === 'polling' && (!status || status.status === 'submitting') && 'Submitting to IBM Quantum...'}
+            {phase === 'polling' &&
+              status &&
+              status.status !== 'submitting' &&
+              `Status: ${status.status}${status.backend_name ? ` on ${status.backend_name}` : ''}${status.job_id ? ` -- job ${status.job_id}` : ''}`}
           </span>
         </motion.div>
       )}

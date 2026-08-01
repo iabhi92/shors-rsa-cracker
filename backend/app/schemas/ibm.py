@@ -41,18 +41,22 @@ class IbmLiveSubmitRequest(BaseModel):
 
 
 class IbmLiveSubmitResponse(BaseModel):
+    # backend_name/job_id are NOT included here -- picking a real backend and actually
+    # submitting to IBM Quantum both involve real network calls (auth, backend-list lookup,
+    # transpilation, job submission) slow enough to occasionally exceed a deployment's own
+    # proxy timeout, so this endpoint kicks that whole chain off on a background thread and
+    # returns immediately with just what's known synchronously (r is pure local number theory).
+    # See ibm_live.py's own module docstring.
     run_id: str
     a: int
     N: int
     n_count: int
     r: int
     shots: int
-    backend_name: str
-    job_id: str
-    status: Literal["queued"] = "queued"
+    status: Literal["submitting"] = "submitting"
 
 
-IbmLiveStatus = Literal["queued", "running", "done", "error"]
+IbmLiveStatus = Literal["submitting", "queued", "running", "done", "error"]
 
 
 class IbmLiveStatusResponse(BaseModel):
@@ -63,8 +67,10 @@ class IbmLiveStatusResponse(BaseModel):
     n_count: int
     r: int
     shots: int
-    backend_name: str
-    job_id: str
+    # None only while status == "submitting" -- the backend hasn't actually been picked/the job
+    # hasn't actually been submitted to IBM yet at that point.
+    backend_name: str | None = None
+    job_id: str | None = None
     # Populated only once status == "done"; None otherwise, including "error".
     counts: dict[str, int] | None = None
     theoretical_distribution: dict[str, float] | None = None
