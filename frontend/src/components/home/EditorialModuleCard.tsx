@@ -60,6 +60,30 @@ export function HardwareSketch() {
   )
 }
 
+export function AttackSurfaceSketch() {
+  // A crosshair on the key at center, with four converging lines from four dots colored to
+  // match the Attack Surface Map's own category colors (red=key recovery, gold=message
+  // recovery, violet=message manipulation, blue=side-channel) -- not arbitrary decoration.
+  return (
+    <svg viewBox="0 0 64 40" className="h-full w-full" aria-hidden="true">
+      <circle cx="32" cy="20" r="3" fill="#e05a4e" />
+      <circle cx="32" cy="20" r="9" fill="none" stroke="#e05a4e" strokeWidth="1" opacity="0.5" />
+      <line x1="32" y1="4" x2="32" y2="11" stroke="#e05a4e" strokeWidth="1" opacity="0.6" />
+      <line x1="32" y1="29" x2="32" y2="36" stroke="#e05a4e" strokeWidth="1" opacity="0.6" />
+      <line x1="16" y1="20" x2="23" y2="20" stroke="#e05a4e" strokeWidth="1" opacity="0.6" />
+      <line x1="41" y1="20" x2="48" y2="20" stroke="#e05a4e" strokeWidth="1" opacity="0.6" />
+      <line x1="10" y1="10" x2="27" y2="17" stroke="#8c919b" strokeWidth="0.75" opacity="0.4" />
+      <line x1="54" y1="10" x2="37" y2="17" stroke="#8c919b" strokeWidth="0.75" opacity="0.4" />
+      <line x1="10" y1="30" x2="27" y2="23" stroke="#8c919b" strokeWidth="0.75" opacity="0.4" />
+      <line x1="54" y1="30" x2="37" y2="23" stroke="#8c919b" strokeWidth="0.75" opacity="0.4" />
+      <circle cx="10" cy="10" r="1.6" fill="#e05a4e" />
+      <circle cx="54" cy="10" r="1.6" fill="#e3b45e" />
+      <circle cx="10" cy="30" r="1.6" fill="#8065b8" />
+      <circle cx="54" cy="30" r="1.6" fill="#204a66" />
+    </svg>
+  )
+}
+
 export function EditorialModuleCard({
   to,
   number,

@@ -123,6 +123,16 @@ export default function SydneyHarbourHero() {
               Jump to Shor's Algorithm
               <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
             </Link>
+            {/* The eyebrow above says "security & quantum computing" -- without this, neither
+                hero CTA actually led anywhere security-related, and a first-time visitor had no
+                immediate path to the 8 real attacks this project demonstrates. */}
+            <Link
+              to="/attack-surface"
+              className="focus-ring group inline-flex items-center gap-2 rounded-sm border border-line px-5 py-2.5 font-mono text-sm font-medium text-ink-muted transition-colors hover:border-red-300/50 hover:text-red-300"
+            >
+              See the Attack Surface
+              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+            </Link>
           </div>
           <motion.p
             key={incidentPhase}

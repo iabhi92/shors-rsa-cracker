@@ -7,8 +7,9 @@ import { Card, ErrorBanner, Spinner, StatCard } from '../components/ui'
 import InterferenceCanvas from '../components/InterferenceCanvas'
 import SydneyHarbourHero from '../components/home/SydneyHarbourHero'
 import TutorialClassScene from '../components/home/TutorialClassScene'
-import { BenchmarkSketch, CircuitSketch, EditorialModuleCard, HardwareSketch, OrbitSketch, WaveSketch } from '../components/home/EditorialModuleCard'
+import { AttackSurfaceSketch, BenchmarkSketch, CircuitSketch, EditorialModuleCard, HardwareSketch, OrbitSketch, WaveSketch } from '../components/home/EditorialModuleCard'
 import CoordinateFooter from '../components/home/CoordinateFooter'
+import { ATTACKS } from '../lib/attackSurface'
 import { DURATION, EASE_SIGNATURE } from '../lib/motion'
 
 const MODULES = [
@@ -22,8 +23,17 @@ const MODULES = [
     accent: '#c99545',
   },
   {
-    to: '/shor',
+    to: '/attack-surface',
     number: '02',
+    title: 'Attack Surface Map',
+    description: `${ATTACKS.length} real attacks against RSA -- key recovery, message recovery, and side-channels -- mapped against what stops each one.`,
+    cta: 'See Every Attack',
+    sketch: <AttackSurfaceSketch />,
+    accent: '#e05a4e',
+  },
+  {
+    to: '/shor',
+    number: '03',
     title: "Shor's Lab",
     description: "Run Shor's algorithm step-by-step in an interactive environment.",
     cta: 'Open Lab',
@@ -32,7 +42,7 @@ const MODULES = [
   },
   {
     to: '/qft',
-    number: '03',
+    number: '04',
     title: 'QFT & Period-Finding',
     description: "Understand the heart of Shor's algorithm -- and how it finds periods the classical world can't.",
     cta: 'Explore',
@@ -41,7 +51,7 @@ const MODULES = [
   },
   {
     to: '/circuit-explorer',
-    number: '04',
+    number: '05',
     title: 'Circuit Explorer',
     description: 'Inspect real quantum circuits, controlled operations, and register evolution.',
     cta: 'View Circuits',
@@ -50,7 +60,7 @@ const MODULES = [
   },
   {
     to: '/ibm-hardware',
-    number: '05',
+    number: '06',
     title: 'Real IBM Hardware',
     description: "Submit this project's real circuit to an actual IBM quantum computer, live, on your own click -- not just a stored screenshot.",
     cta: 'Run It Live',
@@ -113,8 +123,11 @@ export default function HomePage() {
           {meta.status === 'loading' && <Spinner label="Loading project stats…" />}
           {meta.status === 'error' && <ErrorBanner message={meta.message} />}
           {meta.status === 'success' && (
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">
               <StatCard label="Tests passing" value={meta.data.test_count} />
+              <Link to="/attack-surface" className="focus-ring block rounded-sm">
+                <StatCard label="Attacks demonstrated" value={ATTACKS.length} hint="key recovery to side-channels" />
+              </Link>
               <StatCard label="Classical attacks" value={meta.data.classical_attack_methods.length} hint={meta.data.classical_attack_methods.join(', ')} />
               <StatCard label="Quantum backends" value={meta.data.quantum_backends.length} hint={meta.data.quantum_backends.join(' / ')} />
               <StatCard
@@ -132,7 +145,7 @@ export default function HomePage() {
           variants={{ hidden: {}, show: { transition: { staggerChildren: 0.08 } } }}
         >
           <h2 className="mb-4 font-mono text-sm font-semibold tracking-wide text-ink-muted uppercase">Start here</h2>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {MODULES.map((mod) => (
               <motion.div key={mod.to} variants={fadeUp} transition={{ duration: DURATION.fast, ease: EASE_SIGNATURE }}>
                 <EditorialModuleCard {...mod} />
