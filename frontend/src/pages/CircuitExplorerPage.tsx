@@ -4,8 +4,10 @@ import { Divide, Gauge, ScanEye, Sparkles } from 'lucide-react'
 import { apiPost } from '../api/client'
 import { useAction } from '../hooks/useApi'
 import type { CircuitMetadataResponse } from '../types/api'
-import { Button, Card, ErrorBanner, PageHeader, StatCard } from '../components/ui'
+import { Button, Card, ErrorBanner, PageHeader, StatCard, WarningBanner } from '../components/ui'
 import CircuitDiagram from '../components/CircuitDiagram'
+import NextStepNav from '../components/NextStepNav'
+import DocLink from '../components/DocLink'
 
 const SUPPORTED_N = [15, 21, 33, 35, 51, 55, 65]
 const STAGES = [
@@ -42,12 +44,24 @@ export default function CircuitExplorerPage() {
         description="Real, measured qubit and gate counts for the gate-level modular exponentiation circuit (quantum/modexp_circuit.py) -- via quantum/resource_estimate.py's CountingRegister, which runs the actual unmodified circuit-emission code."
       />
 
+      <WarningBanner>
+        N is capped to the {SUPPORTED_N.length} values below since larger composites make the
+        gate-level circuit exponentially slower to actually <em>build</em>, not just simulate --
+        see Resource Estimation for extrapolated counts at real RSA sizes, where direct
+        measurement like this is impossible.
+      </WarningBanner>
+
+      <h2 className="mt-6 mb-3 font-mono text-sm font-semibold tracking-wide text-ink-muted uppercase">
+        0. Circuit schematic
+      </h2>
       <Card>
-        <p className="mb-3 text-xs font-semibold tracking-wide text-ink-muted uppercase">Circuit schematic</p>
         <CircuitDiagram />
       </Card>
 
-      <Card className="mt-6">
+      <h2 className="mt-6 mb-3 font-mono text-sm font-semibold tracking-wide text-ink-muted uppercase">
+        1. Compute real circuit metadata
+      </h2>
+      <Card>
         <div className="flex flex-wrap items-end gap-4">
           <label className="flex flex-col gap-1 text-sm text-ink-muted">
             N
@@ -90,7 +104,7 @@ export default function CircuitExplorerPage() {
       )}
 
       <section className="mt-6 space-y-3">
-        <h2 className="text-sm font-semibold tracking-wide text-ink-muted uppercase">Circuit stages</h2>
+        <h2 className="font-mono text-sm font-semibold tracking-wide text-ink-muted uppercase">2. Circuit stages</h2>
         {STAGES.map((stage, i) => (
           <Card key={stage.name} interactive className="flex gap-4">
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-line bg-navy text-gold">
@@ -107,9 +121,11 @@ export default function CircuitExplorerPage() {
         ))}
       </section>
 
-      <Card className="mt-6">
-        <h2 className="font-medium text-ink">Why zero ancilla leakage matters</h2>
-        <p className="mt-2 text-sm text-ink-muted">
+      <h2 className="mt-6 mb-3 font-mono text-sm font-semibold tracking-wide text-ink-muted uppercase">
+        3. Why zero ancilla leakage matters
+      </h2>
+      <Card>
+        <p className="text-sm text-ink-muted">
           The ancilla (scratch) qubits used by the modular adder must return to exactly |0⟩ after
           each operation -- if they didn't, they'd carry a record of which computational path was
           taken, and that leaked "which-path" information would destroy the quantum interference
@@ -117,7 +133,10 @@ export default function CircuitExplorerPage() {
           a compute-swap-uncompute controlled multiplier is verified to leave 100% of the
           probability mass on the expected result with zero leakage to any other state.
         </p>
+        <DocLink to="/docs/gate-level-modexp" title="Gate-Level Modular Exponentiation" />
       </Card>
+
+      <NextStepNav />
     </div>
   )
 }

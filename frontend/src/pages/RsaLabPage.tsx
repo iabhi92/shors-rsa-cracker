@@ -4,9 +4,10 @@ import { InlineMath } from 'react-katex'
 import { apiPost } from '../api/client'
 import { useAction } from '../hooks/useApi'
 import type { DecryptResponse, EncryptResponse, KeygenResponse } from '../types/api'
-import { Button, Card, ErrorBanner, PageHeader, WarningBanner } from '../components/ui'
+import { Button, Card, ErrorBanner, PageHeader, StatCard, WarningBanner } from '../components/ui'
 import KeyIllustration from '../components/KeyIllustration'
 import RsaFlowVisual from '../components/rsa/RsaFlowVisual'
+import NextStepNav from '../components/NextStepNav'
 import { playKeygen, playEncrypt, playDecrypt } from '../lib/sfx'
 
 export default function RsaLabPage() {
@@ -41,19 +42,19 @@ export default function RsaLabPage() {
         description="Generate a real RSA keypair, encrypt a message, and decrypt it -- using this project's own from-scratch implementation (rsa/keygen.py, rsa/core.py, rsa/primes.py), not a library."
       />
 
-      <div className="mt-6 mb-6">
-        <h2 className="mb-3 font-mono text-sm font-semibold tracking-wide text-ink-muted uppercase">
-          How this actually works, step by step
-        </h2>
-        <RsaFlowVisual realKey={key} realCiphertext={ciphertext} realPlaintext={recoveredPlaintext} />
-      </div>
-
       <WarningBanner>
         This is <strong>textbook RSA</strong> (no OAEP padding) at an educational key size.
         It's deterministic and malleable by design, so the weaknesses are visible --
         never use output from this page to protect real data. See{' '}
         <Link to="/security" className="underline">Security &amp; Limitations</Link>.
       </WarningBanner>
+
+      <div className="mt-6 mb-6">
+        <h2 className="mb-3 font-mono text-sm font-semibold tracking-wide text-ink-muted uppercase">
+          0. How this actually works, step by step
+        </h2>
+        <RsaFlowVisual realKey={key} realCiphertext={ciphertext} realPlaintext={recoveredPlaintext} />
+      </div>
 
       <Card className="mt-6">
         <h2 className="font-medium text-ink">1. Generate a keypair</h2>
@@ -145,7 +146,17 @@ export default function RsaLabPage() {
             {decrypt.state.data.plaintext === message && ' — matches the original message.'}
           </div>
         )}
+        {key && ciphertext && decrypt.state.status === 'success' && (
+          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <StatCard label="Modulus size" value={`${key.n_bits} bits`} />
+            <StatCard label="Ciphertext blocks" value={ciphertext.ciphertext.length} />
+            <StatCard label="Block size" value={`${ciphertext.block_size_bytes} B`} />
+            <StatCard label="Round-trip" value={decrypt.state.data.plaintext === message ? 'Match' : 'Mismatch'} />
+          </div>
+        )}
       </Card>
+
+      <NextStepNav />
     </div>
   )
 }

@@ -5,6 +5,8 @@ import { useAction } from '../hooks/useApi'
 import type { BellStateResponse, GateName, StatevectorResponse } from '../types/api'
 import { Button, Card, ErrorBanner, PageHeader, StatCard, WarningBanner } from '../components/ui'
 import AmplitudeView from '../components/AmplitudeView'
+import NextStepNav from '../components/NextStepNav'
+import DocLink from '../components/DocLink'
 import { playShimmer, playTick, playWhoosh } from '../lib/sfx'
 
 const GATES: { name: GateName; symbol: string; effect: string }[] = [
@@ -196,7 +198,10 @@ export default function QuantumFundamentalsPage() {
             <p className="mt-3 text-xs text-ink-muted">{bellData.explanation}</p>
           </div>
         )}
+        <DocLink to="/docs/quantum-basics" title="Quantum Basics" />
       </Card>
+
+      <NextStepNav />
     </div>
   )
 }

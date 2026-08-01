@@ -2,6 +2,8 @@ import { Link } from 'react-router'
 import { Crosshair } from 'lucide-react'
 import { Card, PageHeader, StatCard, Table } from '../components/ui'
 import { ATTACKS, CATEGORY_ICON, CATEGORY_STYLES } from '../lib/attackSurface'
+import NextStepNav from '../components/NextStepNav'
+import DocLink from '../components/DocLink'
 
 export default function AttackSurfacePage() {
   const keyRecoveryCount = ATTACKS.filter((a) => a.category === 'Key recovery').length
@@ -70,6 +72,9 @@ export default function AttackSurfacePage() {
           )
         })}
       </div>
+
+      <DocLink to="/security" title="Security & Limitations" />
+      <NextStepNav />
     </div>
   )
 }

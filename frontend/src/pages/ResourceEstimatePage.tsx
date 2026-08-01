@@ -6,6 +6,8 @@ import { Card, ErrorBanner, PageHeader, Spinner, StatCard, WarningBanner } from 
 import DoomsdayClock from '../components/DoomsdayClock'
 import ResourceCurveChart from '../components/ResourceCurveChart'
 import WhatBreaksFirst from '../components/WhatBreaksFirst'
+import NextStepNav from '../components/NextStepNav'
+import DocLink from '../components/DocLink'
 
 const PRESETS = [128, 512, 1024, 2048]
 // estimate_for_rsa_bits is closed-form (no simulation) -- cheap enough to recompute on every
@@ -37,11 +39,15 @@ export default function ResourceEstimatePage() {
         vs. extrapolated.
       </WarningBanner>
 
-      <div className="mt-6">
-        <DoomsdayClock />
-      </div>
+      <h2 className="mt-6 mb-3 font-mono text-sm font-semibold tracking-wide text-ink-muted uppercase">
+        0. Where things stand today
+      </h2>
+      <DoomsdayClock />
 
-      <Card className="mt-6">
+      <h2 className="mt-6 mb-3 font-mono text-sm font-semibold tracking-wide text-ink-muted uppercase">
+        1. Pick a key size
+      </h2>
+      <Card>
         <div className="flex flex-col gap-3">
           <label className="flex flex-col gap-1 text-sm text-ink-muted">
             RSA modulus size: <span className="font-mono text-ink">{bits} bits</span>
@@ -108,9 +114,11 @@ export default function ResourceEstimatePage() {
 
       <WhatBreaksFirst bits={bits} resourceEstimate={estimate.state.status === 'success' ? estimate.state.data : null} />
 
-      <Card className="mt-6">
-        <h2 className="font-medium text-ink">The cliff: how fast this actually grows</h2>
-        <p className="mt-1 text-sm text-ink-muted">
+      <h2 className="mt-6 mb-3 font-mono text-sm font-semibold tracking-wide text-ink-muted uppercase">
+        2. The cliff: how fast this actually grows
+      </h2>
+      <Card>
+        <p className="text-sm text-ink-muted">
           Every point below is a real closed-form computation at that bit size, not an interpolation -- the dashed line
           marks wherever the slider above is currently set.
         </p>
@@ -122,11 +130,18 @@ export default function ResourceEstimatePage() {
       </Card>
 
       {estimate.state.status === 'success' && (
-        <Card className="mt-6">
-          <h2 className="font-medium text-ink">Methodology</h2>
-          <p className="mt-2 text-sm text-ink-muted">{estimate.state.data.methodology_note}</p>
-        </Card>
+        <>
+          <h2 className="mt-6 mb-3 font-mono text-sm font-semibold tracking-wide text-ink-muted uppercase">
+            3. Methodology
+          </h2>
+          <Card>
+            <p className="text-sm text-ink-muted">{estimate.state.data.methodology_note}</p>
+            <DocLink to="/docs/gate-level-modexp" title="Gate-Level Modular Exponentiation" />
+          </Card>
+        </>
       )}
+
+      <NextStepNav />
     </div>
   )
 }

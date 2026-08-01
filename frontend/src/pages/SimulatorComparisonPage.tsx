@@ -5,6 +5,7 @@ import { useFetchOnMount } from '../hooks/useApi'
 import type { ShorBackend, ShorBackendsResponse, SimulatorCompareResponse } from '../types/api'
 import { Card, ErrorBanner, PageHeader, Spinner } from '../components/ui'
 import BackendRace from '../components/shor/BackendRace'
+import NextStepNav from '../components/NextStepNav'
 
 function Yn({ value }: { value: boolean }) {
   return value ? <span className="text-success">yes</span> : <span className="text-ink-muted">no</span>
@@ -37,9 +38,11 @@ export default function SimulatorComparisonPage() {
         description="Every backend this project can run Shor's algorithm on, what it actually does, and where it's verified -- each row cites the module and test that backs it. Race them live below with your own N, not just read about them."
       />
 
+      <h2 className="mb-3 font-mono text-sm font-semibold tracking-wide text-ink-muted uppercase">
+        0. Try it live
+      </h2>
       <Card>
-        <h2 className="font-medium text-ink">Try it live</h2>
-        <p className="mt-1 text-sm text-ink-muted">
+        <p className="text-sm text-ink-muted">
           Pick an N and race every backend that can actually run it, in parallel, from the same random seed --
           the exact same race the Shor's Algorithm Lab uses, right here next to each backend's own spec.
         </p>
@@ -88,6 +91,9 @@ export default function SimulatorComparisonPage() {
         {backends.status === 'error' && <div className="mt-3"><ErrorBanner message={backends.message} /></div>}
       </Card>
 
+      <h2 className="mt-6 mb-3 font-mono text-sm font-semibold tracking-wide text-ink-muted uppercase">
+        1. Every backend's real spec
+      </h2>
       {compare.status === 'loading' && <Spinner label="Loading comparison data…" />}
       {compare.status === 'error' && <ErrorBanner message={compare.message} />}
 
@@ -143,6 +149,8 @@ export default function SimulatorComparisonPage() {
           })}
         </div>
       )}
+
+      <NextStepNav />
     </div>
   )
 }

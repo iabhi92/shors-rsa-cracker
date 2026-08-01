@@ -13,6 +13,8 @@ import ShorLabIllustration from '../components/shor/ShorLabIllustration'
 import BackendRace from '../components/shor/BackendRace'
 import QuantumClassicalRace from '../components/shor/QuantumClassicalRace'
 import RealHardwareCheckpoint from '../components/shor/RealHardwareCheckpoint'
+import NextStepNav from '../components/NextStepNav'
+import DocLink from '../components/DocLink'
 import { downloadShorResultCard } from '../lib/shareCard'
 import { playSettle } from '../lib/sfx'
 
@@ -195,6 +197,9 @@ export default function ShorLabPage() {
           </div>
         </div>
       )}
+
+      <DocLink to="/docs/shors-algorithm-math" title="Shor's Algorithm: The Math" />
+      <NextStepNav />
     </div>
   )
 }

@@ -3,6 +3,7 @@ import { apiGet } from '../api/client'
 import { useFetchOnMount } from '../hooks/useApi'
 import type { BenchmarkResponse } from '../types/api'
 import { Card, ErrorBanner, PageHeader, Spinner, Table } from '../components/ui'
+import NextStepNav from '../components/NextStepNav'
 
 export default function ClassicalBenchmarkPage() {
   const benchmark = useFetchOnMount(() => apiGet<BenchmarkResponse>('/classical/benchmark'), [])
@@ -98,6 +99,8 @@ export default function ClassicalBenchmarkPage() {
           </Card>
         </>
       )}
+
+      <NextStepNav />
     </div>
   )
 }

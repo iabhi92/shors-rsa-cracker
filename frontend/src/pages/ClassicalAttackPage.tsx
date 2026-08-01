@@ -3,9 +3,10 @@ import { Link, useSearchParams } from 'react-router'
 import { apiPost } from '../api/client'
 import { useAction } from '../hooks/useApi'
 import type { AttackMethod, CompareResponse } from '../types/api'
-import { Button, Card, ErrorBanner, PageHeader, Table } from '../components/ui'
+import { Button, Card, ErrorBanner, PageHeader, StatCard, Table } from '../components/ui'
 import ClassicalAttackVisual from '../components/classical/ClassicalAttackVisual'
 import TrialDivisionReplay from '../components/classical/TrialDivisionReplay'
+import NextStepNav from '../components/NextStepNav'
 
 const METHOD_INFO: Record<AttackMethod, { label: string; why: string; suggestedN: number }> = {
   trial_division: {
@@ -65,6 +66,11 @@ export default function ClassicalAttackPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [n])
 
+  const results = compare.state.status === 'success' ? compare.state.data.results : null
+  const fastest = results
+    ? [...results].filter((r) => r.succeeded).sort((a, b) => a.elapsed_seconds - b.elapsed_seconds)[0]
+    : null
+
   return (
     <div className="mx-auto max-w-4xl">
       <PageHeader
@@ -74,11 +80,14 @@ export default function ClassicalAttackPage() {
 
       <div className="mb-6">
         <h2 className="mb-3 font-mono text-sm font-semibold tracking-wide text-ink-muted uppercase">
-          How each attack actually works, step by step
+          0. How each attack actually works, step by step
         </h2>
         <ClassicalAttackVisual n={n} onNChange={setN} />
       </div>
 
+      <h2 className="mb-3 font-mono text-sm font-semibold tracking-wide text-ink-muted uppercase">
+        1. Run all four attacks live
+      </h2>
       <Card>
         <p className="font-mono text-sm text-ink-muted">
           Using <span className="text-ink">n = {n}</span> —{' '}
@@ -114,6 +123,15 @@ export default function ClassicalAttackPage() {
       {compare.state.status === 'success' && (
         <Card className="mt-6">
           <h2 className="mb-3 font-medium text-ink">Results for n = {compare.state.data.n}</h2>
+          <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <StatCard label="Bit length" value={`${n.toString(2).length} bits`} />
+            <StatCard label="Methods succeeded" value={compare.state.data.results.filter((r) => r.succeeded).length} />
+            <StatCard label="Fastest method" value={fastest ? METHOD_INFO[fastest.method].label : '—'} />
+            <StatCard
+              label="Total operations"
+              value={compare.state.data.results.reduce((sum, r) => sum + r.operations, 0).toLocaleString()}
+            />
+          </div>
           <Table>
             <thead>
               <tr className="border-b border-line text-xs tracking-wide text-ink-muted uppercase">
@@ -165,6 +183,8 @@ export default function ClassicalAttackPage() {
         <Link to="/classical-benchmark" className="text-gold underline underline-offset-2">Classical Benchmark</Link>{' '}
         page for measured evidence of the exponential growth.
       </p>
+
+      <NextStepNav />
     </div>
   )
 }

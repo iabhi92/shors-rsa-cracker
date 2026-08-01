@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router'
 import { ArrowRight, Command, Compass, Eye, FlaskConical, Lightbulb, Search, Swords, Terminal } from 'lucide-react'
 import { Card, PageHeader } from '../components/ui'
+import { LEARNING_PATH } from '../lib/learningPath'
 
 /** The exact same bounds the real command palette uses to recognize a bare composite number as
  * "Factor n = ..." (see CommandPalette.tsx) -- mirrored here, not re-guessed, so this preview
@@ -209,16 +210,15 @@ export default function GuidePage() {
             </div>
             <div className="sm:col-span-2">
               <p className="font-medium text-ink">Not sure where to start? Follow this order:</p>
+              <p className="mt-1 text-xs text-ink-muted">
+                This isn't just a suggestion here -- every page below actually has a real "Next"
+                link at the bottom carrying you to the next one in this exact sequence.
+              </p>
               <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                {[
-                  { to: '/rsa', label: 'RSA Laboratory', hint: 'build a real key, lock a message' },
-                  { to: '/classical-attacks', label: 'Classical Attack Lab', hint: 'break it by hand' },
-                  { to: '/shor', label: "Shor's Algorithm Lab", hint: 'watch quantum change the math' },
-                ].map((step, i, arr) => (
+                {LEARNING_PATH.map((step, i, arr) => (
                   <span key={step.to} className="flex items-center gap-1.5">
                     <Link
                       to={step.to}
-                      title={step.hint}
                       className="focus-ring flex items-center gap-1.5 rounded-sm border border-line px-2.5 py-1.5 transition-colors hover:border-gold/50 hover:bg-gold/5"
                     >
                       <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-gold/60 font-mono text-[0.65rem] text-gold">

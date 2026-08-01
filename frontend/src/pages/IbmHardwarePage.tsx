@@ -8,6 +8,8 @@ import AmplitudeView from '../components/AmplitudeView'
 import NoiseOverlayChart from '../components/NoiseOverlayChart'
 import CodePanel, { type CodeSnippet } from '../components/CodePanel'
 import LiveIbmHardwareRun from '../components/LiveIbmHardwareRun'
+import NextStepNav from '../components/NextStepNav'
+import DocLink from '../components/DocLink'
 import { playIbmBlip } from '../lib/sfx'
 
 // Copied verbatim from this repository's own quantum/ibm_hardware.py -- the exact module that
@@ -193,9 +195,12 @@ export default function IbmHardwarePage() {
               IBM Cloud account and CRN behind the scenes. See backend/app/routers/ibm_live.py's own module docstring
               for the rate limits guarding the shared, live version above.
             </p>
+            <DocLink to="/docs/real-hardware-validation" title="Real Hardware Validation" />
           </Card>
         </>
       )}
+
+      <NextStepNav />
     </div>
   )
 }

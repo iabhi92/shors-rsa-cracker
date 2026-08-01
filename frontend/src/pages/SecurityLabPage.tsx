@@ -10,6 +10,8 @@ import CodePanel, { type CodeSnippet } from '../components/CodePanel'
 import ParityOracleAttack from '../components/security/ParityOracleAttack'
 import WienerAttackDemo from '../components/security/WienerAttackDemo'
 import CrtFaultInjectionDemo from '../components/security/CrtFaultInjectionDemo'
+import NextStepNav from '../components/NextStepNav'
+import DocLink from '../components/DocLink'
 import { playKeygen, playTamper } from '../lib/sfx'
 
 // Copied verbatim from this repository's own backend/app/routers/security_demo.py -- the exact
@@ -194,6 +196,9 @@ export default function SecurityLabPage() {
       <WienerAttackDemo />
       <CrtFaultInjectionDemo />
       <Scorecard completed={completed} />
+
+      <DocLink to="/security" title="Security & Limitations" />
+      <NextStepNav />
     </div>
   )
 }

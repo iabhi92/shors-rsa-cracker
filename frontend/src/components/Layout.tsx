@@ -12,7 +12,6 @@ import {
   CircuitBoard,
   Compass,
   Cpu,
-  FlaskConical,
   GitCompareArrows,
   History,
   Home,
@@ -21,7 +20,6 @@ import {
   Map,
   Menu,
   Radar,
-  Scale,
   Search,
   Server,
   ShieldCheck,
@@ -35,9 +33,14 @@ import CommandPalette from './CommandPalette'
 import type { CommandItem } from './CommandPalette'
 import AmbientBackground from './AmbientBackground'
 
-/** Six groups, named and ordered to match the site's own visual identity brief -- a first-time
- * visitor can hold six words in their head, even though there are eighteen actual pages behind
- * them (see the command palette / `/guide` for the full list, nothing here is hidden). */
+/** Four groups by subject, not by how the site happened to get built -- a first-time visitor can
+ * hold four words in their head, even though there are eighteen actual pages behind them (see
+ * the command palette / `/guide` for the full list, nothing here is hidden). Previously six
+ * groups split closely related content apart for no reason a visitor could guess: Shor's Lab
+ * lived in "Interactive Lab" while the QFT deep-dive, resource estimate, and simulator
+ * comparison for that exact same algorithm lived in two different other groups, and "Hardware"
+ * was a whole top-level group holding one link. Regrouped around what each page is actually
+ * about instead. */
 const NAV_SECTIONS: { label: string; icon: LucideIcon; links: { to: string; label: string; icon: LucideIcon }[] }[] = [
   {
     label: 'Home',
@@ -45,37 +48,34 @@ const NAV_SECTIONS: { label: string; icon: LucideIcon; links: { to: string; labe
     links: [{ to: '/', label: 'Home', icon: Home }],
   },
   {
-    label: 'The Algorithm',
-    icon: Sigma,
+    label: 'Foundations',
+    icon: Atom,
     links: [
       { to: '/quantum-fundamentals', label: 'Quantum Fundamentals', icon: Atom },
-      { to: '/simulator-comparison', label: 'Simulator Comparison', icon: GitCompareArrows },
-      { to: '/resource-estimate', label: 'Resource Estimation', icon: BarChart3 },
-    ],
-  },
-  {
-    label: 'Interactive Lab',
-    icon: FlaskConical,
-    links: [
       { to: '/rsa', label: 'RSA Laboratory', icon: KeyRound },
-      { to: '/malleability-lab', label: 'Malleability & Tampering Lab', icon: Bug },
-      { to: '/classical-attacks', label: 'Classical Attack Lab', icon: Swords },
-      { to: '/shor', label: "Shor's Algorithm Lab", icon: Cpu },
     ],
   },
   {
-    label: 'Classical vs Quantum',
-    icon: Scale,
+    label: "Shor's Algorithm",
+    icon: Sigma,
     links: [
       { to: '/qft', label: 'QFT & Period-Finding', icon: Waves },
+      { to: '/shor', label: "Shor's Algorithm Lab", icon: Cpu },
       { to: '/circuit-explorer', label: 'Circuit Explorer', icon: CircuitBoard },
-      { to: '/classical-benchmark', label: 'Classical Benchmark', icon: BarChart3 },
+      { to: '/simulator-comparison', label: 'Simulator Comparison', icon: GitCompareArrows },
+      { to: '/resource-estimate', label: 'Resource Estimation', icon: BarChart3 },
+      { to: '/ibm-hardware', label: 'IBM Hardware Validation', icon: Server },
     ],
   },
   {
-    label: 'Hardware',
-    icon: Server,
-    links: [{ to: '/ibm-hardware', label: 'IBM Hardware Validation', icon: Server }],
+    label: 'Attacking RSA',
+    icon: Swords,
+    links: [
+      { to: '/classical-attacks', label: 'Classical Attack Lab', icon: Swords },
+      { to: '/classical-benchmark', label: 'Classical Benchmark', icon: BarChart3 },
+      { to: '/malleability-lab', label: 'Malleability & Tampering Lab', icon: Bug },
+      { to: '/attack-surface', label: 'Attack Surface Map', icon: Map },
+    ],
   },
   {
     label: 'About the Project',
@@ -83,7 +83,6 @@ const NAV_SECTIONS: { label: string; icon: LucideIcon; links: { to: string; labe
     links: [
       { to: '/guide', label: 'How to Use This Site', icon: Compass },
       { to: '/history', label: 'History of RSA & Shor', icon: History },
-      { to: '/attack-surface', label: 'Attack Surface Map', icon: Map },
       { to: '/security-dashboard', label: 'Security Dashboard', icon: Radar },
       { to: '/security', label: 'Security & Limitations', icon: ShieldCheck },
       { to: '/docs', label: 'Documentation', icon: BookOpen },

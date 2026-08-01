@@ -4,10 +4,12 @@ import { BlockMath } from 'react-katex'
 import { apiPost } from '../api/client'
 import { useAction } from '../hooks/useApi'
 import type { QftDemoResponse } from '../types/api'
-import { Button, Card, ErrorBanner, PageHeader, SuccessBanner } from '../components/ui'
+import { Button, Card, ErrorBanner, PageHeader, StatCard, SuccessBanner } from '../components/ui'
 import AmplitudeView from '../components/AmplitudeView'
 import PhaseDialRow from '../components/PhaseDialRow'
 import CodePanel, { type CodeSnippet } from '../components/CodePanel'
+import NextStepNav from '../components/NextStepNav'
+import DocLink from '../components/DocLink'
 
 // Copied verbatim from this repository's own quantum/qft.py.
 const QFT_SNIPPETS: Record<string, CodeSnippet> = {
@@ -51,6 +53,9 @@ export default function QftPage() {
         description="The QFT doesn't factor anything by itself -- it turns periodic structure in a superposition into a measurable peak pattern, which is what Shor's algorithm's period-finding step relies on."
       />
 
+      <h2 className="mb-3 font-mono text-sm font-semibold tracking-wide text-ink-muted uppercase">
+        0. Apply the QFT and watch it happen
+      </h2>
       <Card>
         <BlockMath math="\text{QFT}|x\rangle = \frac{1}{\sqrt{2^n}} \sum_{y=0}^{2^n-1} e^{2\pi i x y / 2^n} |y\rangle" />
         <p className="mt-2 text-sm text-ink-muted">
@@ -102,6 +107,12 @@ export default function QftPage() {
             ) : (
               <ErrorBanner message="Did not match the exact DFT matrix -- unexpected, please report this." />
             )}
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <StatCard label="Qubits" value={qft.state.data.n_qubits} />
+              <StatCard label="State-vector dimension" value={2 ** qft.state.data.n_qubits} hint={`2^${qft.state.data.n_qubits}`} />
+              <StatCard label="Matches exact DFT" value={qft.state.data.matches_exact_dft_matrix ? 'Yes' : 'No'} />
+              <StatCard label="Max amplitude error" value={qft.state.data.max_amplitude_error_vs_dft_matrix.toExponential(2)} />
+            </div>
             {/* The phase itself -- what a probability bar chart can't show at all. Before a QFT,
                 every basis state is equal length and (for a definite input) already in phase;
                 after one, the arrows fan out to their real computed angles. This is the actual
@@ -134,14 +145,18 @@ export default function QftPage() {
         )}
       </Card>
 
-      <Card className="mt-6">
-        <h2 className="mb-2 font-medium text-ink">The actual code behind this step</h2>
+      <h2 className="mt-6 mb-3 font-mono text-sm font-semibold tracking-wide text-ink-muted uppercase">
+        1. The actual code behind this step
+      </h2>
+      <Card>
         <CodePanel stageId="forward" snippets={QFT_SNIPPETS} />
       </Card>
 
-      <Card className="mt-6">
-        <h2 className="font-medium text-ink">How this connects to period-finding</h2>
-        <p className="mt-2 text-sm text-ink-muted">
+      <h2 className="mt-6 mb-3 font-mono text-sm font-semibold tracking-wide text-ink-muted uppercase">
+        2. How this connects to period-finding
+      </h2>
+      <Card>
+        <p className="text-sm text-ink-muted">
           In Shor's algorithm, a control register is put into superposition, then entangled with
           a target register via controlled modular exponentiation (so the target register's
           value depends periodically on the control register's value, with period equal to the
@@ -150,7 +165,10 @@ export default function QftPage() {
           <code>2^n_count / r</code> -- try it yourself on the{' '}
           <Link to="/shor" className="text-gold underline underline-offset-2">Shor's Algorithm Lab</Link> page.
         </p>
+        <DocLink to="/docs/qft-and-period-finding" title="QFT & Period-Finding" />
       </Card>
+
+      <NextStepNav />
     </div>
   )
 }
