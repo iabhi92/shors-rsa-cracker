@@ -251,19 +251,28 @@ function AlsoBuilt() {
   )
 }
 
+/** The nav list is long enough (18 pages across 4 groups) that it can outgrow the viewport on
+ * its own -- previously the *entire* sidebar (logo included) scrolled as one region, which
+ * meant reaching Live Systems or Also Built at the bottom meant scrolling the logo and top of
+ * the nav out of view first, easy to never discover. Now only this middle region scrolls
+ * (`min-h-0` is required here, not optional -- without it a flex child won't shrink below its
+ * content size and `overflow-y-auto` never actually engages); the logo above and the
+ * quote/illustration/status footer below stay pinned and always visible. */
 function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <div className="flex h-full flex-col">
       <NavLink to="/" onClick={onNavigate} className="focus-ring shrink-0 rounded-sm">
         <Logo />
       </NavLink>
-      <div className="mt-8 flex-1">
+      <div className="mt-8 min-h-0 flex-1 overflow-y-auto">
         <NavLinks onNavigate={onNavigate} />
       </div>
-      <SidebarQuote />
-      <UnswBuildingIllustration />
-      <LiveStatus />
-      <AlsoBuilt />
+      <div className="shrink-0">
+        <SidebarQuote />
+        <UnswBuildingIllustration />
+        <LiveStatus />
+        <AlsoBuilt />
+      </div>
     </div>
   )
 }
