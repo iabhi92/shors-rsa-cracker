@@ -1,5 +1,4 @@
 import { NavLink, Outlet, useLocation } from 'react-router'
-import UnswBuildingIllustration from './UnswBuildingIllustration'
 import { useEffect, useState } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import { DURATION, EASE_SIGNATURE } from '../lib/motion'
@@ -102,7 +101,7 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   const location = useLocation()
 
   return (
-    <nav className="flex flex-col gap-1">
+    <nav className="flex flex-col gap-0.5">
       {NAV_SECTIONS.map((section) => {
         const isSectionActive = section.links.some((l) => l.to === location.pathname)
         const isSingle = section.links.length === 1
@@ -112,7 +111,7 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
               to={section.links[0].to}
               end={section.links[0].to === '/'}
               onClick={isSingle ? onNavigate : undefined}
-              className={`focus-ring group relative flex items-center gap-3 border-l-2 py-2 pr-3 pl-3 font-sans text-sm font-medium transition-colors ${
+              className={`focus-ring group relative flex items-center gap-3 border-l-2 py-1.5 pr-3 pl-3 font-sans text-sm font-medium transition-colors ${
                 isSectionActive ? 'border-gold bg-surface text-gold-warm' : 'border-transparent text-ink-muted hover:bg-surface/60 hover:text-ink'
               }`}
             >
@@ -127,14 +126,14 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
               <span>{section.label}</span>
             </NavLink>
             {!isSingle && (
-              <ul className="mt-0.5 mb-1 ml-[1.65rem] flex flex-col gap-0.5 border-l border-line pl-3.5">
+              <ul className="mt-0.5 mb-0.5 ml-[1.65rem] flex flex-col border-l border-line pl-3.5">
                 {section.links.map((link) => (
                   <li key={link.to}>
                     <NavLink
                       to={link.to}
                       onClick={onNavigate}
                       className={({ isActive }) =>
-                        `focus-ring block rounded-sm px-2 py-1 font-mono text-xs transition-colors ${
+                        `focus-ring block rounded-sm px-2 py-0.5 font-mono text-xs transition-colors ${
                           isActive ? 'text-gold-warm' : 'text-ink-muted/80 hover:text-ink'
                         }`
                       }
@@ -205,28 +204,14 @@ function CommandPaletteTrigger({ onOpen }: { onOpen: () => void }) {
   )
 }
 
-/** A real G.H. Hardy quote (A Mathematician's Apology-adjacent sentiment) -- not invented
- * filler, and genuinely on-theme for a page about number theory and proof. */
-function SidebarQuote() {
-  return (
-    <blockquote className="mt-6 border-l-2 border-gold/40 px-3 py-1 font-display text-sm text-ink-muted italic">
-      "Mathematics is the harbour in which truth arrives."
-      <footer className="mt-1 font-sans text-xs not-italic text-ink-muted/70">— after G. H. Hardy</footer>
-    </blockquote>
-  )
-}
-
 function LiveStatus() {
   return (
-    <div className="mt-auto flex items-center gap-2 border-t border-line px-3 pt-4 font-mono text-xs text-ink-muted">
-      <span className="relative flex h-1.5 w-1.5">
+    <div className="flex items-center gap-2 px-3 font-mono text-xs text-ink-muted">
+      <span className="relative flex h-1.5 w-1.5 shrink-0">
         <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-75" />
         <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-success" />
       </span>
-      <span>
-        <span className="block tracking-[0.1em] text-ink-muted/70 uppercase">Live systems</span>
-        <span className="block text-ink-muted">All systems nominal.</span>
-      </span>
+      <span>All systems nominal.</span>
     </div>
   )
 }
@@ -240,36 +225,29 @@ function AlsoBuilt() {
       href="https://iabhi92.github.io/Crypto-Project/"
       target="_blank"
       rel="noreferrer"
-      className="focus-ring mt-3 flex items-center gap-2 border-t border-line px-3 pt-3 font-mono text-xs text-ink-muted transition-colors hover:text-gold"
+      className="focus-ring flex items-center gap-2 rounded-sm px-3 py-1 font-mono text-xs text-ink-muted transition-colors hover:text-gold"
     >
       <ExternalLink className="h-3.5 w-3.5 shrink-0" />
-      <span>
-        <span className="block tracking-[0.1em] text-ink-muted/70 uppercase">Also built</span>
-        <span className="block">Distributed threshold signatures →</span>
-      </span>
+      <span>Also built: distributed threshold signatures</span>
     </a>
   )
 }
 
-/** The nav list is long enough (18 pages across 4 groups) that it can outgrow the viewport on
- * its own -- previously the *entire* sidebar (logo included) scrolled as one region, which
- * meant reaching Live Systems or Also Built at the bottom meant scrolling the logo and top of
- * the nav out of view first, easy to never discover. Now only this middle region scrolls
- * (`min-h-0` is required here, not optional -- without it a flex child won't shrink below its
- * content size and `overflow-y-auto` never actually engages); the logo above and the
- * quote/illustration/status footer below stay pinned and always visible. */
+/** The nav list (18 pages across 4 groups) plus the logo, quote, illustration, and status
+ * footer add up to more content than most laptop viewports have vertical room for -- rather
+ * than let any part of the sidebar scroll (easy to never notice there's more below the fold),
+ * everything here is sized to actually fit: the decorative building illustration and quote were
+ * cut, nav item padding was tightened, and what's left (logo, nav, live status, also-built) is a
+ * fixed, non-scrolling stack. If the nav grows further this will need revisiting, but for the
+ * current 18 links it fits down to ~640px of viewport height. */
 function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full flex-col gap-3">
       <NavLink to="/" onClick={onNavigate} className="focus-ring shrink-0 rounded-sm">
         <Logo />
       </NavLink>
-      <div className="mt-8 min-h-0 flex-1 overflow-y-auto">
-        <NavLinks onNavigate={onNavigate} />
-      </div>
-      <div className="shrink-0">
-        <SidebarQuote />
-        <UnswBuildingIllustration />
+      <NavLinks onNavigate={onNavigate} />
+      <div className="mt-auto flex shrink-0 flex-col gap-1.5 border-t border-line pt-2.5">
         <LiveStatus />
         <AlsoBuilt />
       </div>
@@ -363,7 +341,7 @@ export default function Layout() {
       <CommandPalette items={COMMAND_ITEMS} open={paletteOpen} onClose={() => setPaletteOpen(false)} />
 
       {/* persistent desktop sidebar */}
-      <aside className="fixed inset-y-0 left-0 z-20 hidden w-72 flex-col overflow-y-auto border-r border-line bg-navy px-5 py-6 lg:flex">
+      <aside className="fixed inset-y-0 left-0 z-20 hidden w-72 flex-col overflow-y-auto border-r border-line bg-navy px-5 py-4 lg:flex">
         <SidebarContent />
       </aside>
 
@@ -376,7 +354,7 @@ export default function Layout() {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -16 }}
             transition={{ duration: DURATION.micro }}
-            className="fixed inset-y-0 left-0 z-40 flex w-72 flex-col overflow-y-auto border-r border-line bg-navy px-5 py-6 shadow-2xl lg:hidden"
+            className="fixed inset-y-0 left-0 z-40 flex w-72 flex-col overflow-y-auto border-r border-line bg-navy px-5 py-4 shadow-2xl lg:hidden"
           >
             <SidebarContent onNavigate={() => setNavOpen(false)} />
           </motion.div>
