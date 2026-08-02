@@ -12,6 +12,7 @@ import {
   CircuitBoard,
   Compass,
   Cpu,
+  ExternalLink,
   GitCompareArrows,
   History,
   Home,
@@ -230,6 +231,26 @@ function LiveStatus() {
   )
 }
 
+/** A reciprocal link to the other project -- the Kelsey/Lang/Lucks distributed hash-signature
+ * showcase links back here the same way, each site pointing visitors at the other rather than
+ * only at itself. */
+function AlsoBuilt() {
+  return (
+    <a
+      href="https://iabhi92.github.io/Crypto-Project/"
+      target="_blank"
+      rel="noreferrer"
+      className="focus-ring mt-3 flex items-center gap-2 border-t border-line px-3 pt-3 font-mono text-xs text-ink-muted transition-colors hover:text-gold"
+    >
+      <ExternalLink className="h-3.5 w-3.5 shrink-0" />
+      <span>
+        <span className="block tracking-[0.1em] text-ink-muted/70 uppercase">Also built</span>
+        <span className="block">Distributed threshold signatures →</span>
+      </span>
+    </a>
+  )
+}
+
 function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <div className="flex h-full flex-col">
@@ -242,6 +263,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       <SidebarQuote />
       <UnswBuildingIllustration />
       <LiveStatus />
+      <AlsoBuilt />
     </div>
   )
 }
