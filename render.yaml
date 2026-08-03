@@ -11,6 +11,9 @@ services:
     startCommand: "uvicorn backend.app.main:app --host 0.0.0.0 --port $PORT"
     envVars:
       - key: CORS_ALLOW_ORIGINS
-        value: https://iabhi92.github.io
+        # The frontend moved to a custom domain (see frontend/public/CNAME); the old
+        # iabhi92.github.io URL is kept here too since GitHub Pages 301-redirects it rather
+        # than retiring it, so a cached/bookmarked link there still needs to work.
+        value: https://iabhi92.github.io,https://crackrsa.com,https://www.crackrsa.com
       - key: PYTHON_VERSION
         value: 3.12.13
