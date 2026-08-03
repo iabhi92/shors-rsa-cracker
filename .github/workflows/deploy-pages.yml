@@ -38,10 +38,11 @@ jobs:
         # VITE_API_BASE_URL points the static site at the live Render backend (see
         # render.yaml) -- set as a repo Actions variable (Settings > Secrets and variables >
         # Actions > Variables) to https://shors-rsa-cracker.onrender.com/api, the service's
-        # actual URL. VITE_BASE_PATH matches this repo's GitHub Pages project-site path.
+        # actual URL. VITE_BASE_PATH is "/" (the default, so unset) now that the site is
+        # served from a custom domain at the root (frontend/public/CNAME) rather than
+        # GitHub's /shors-rsa-cracker/ project-site subpath.
         env:
           VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL || 'https://shors-rsa-cracker.onrender.com/api' }}
-          VITE_BASE_PATH: /shors-rsa-cracker/
         run: npm run build
 
       - name: SPA fallback for client-side routing
