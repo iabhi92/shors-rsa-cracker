@@ -2,6 +2,7 @@ import { NavLink, Outlet, useLocation } from 'react-router'
 import { useEffect, useState } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import { DURATION, EASE_SIGNATURE } from '../lib/motion'
+import { DEFAULT_PAGE_META, PAGE_META } from '../lib/pageMeta'
 import SfxToggle from './SfxToggle'
 import {
   Atom,
@@ -17,6 +18,7 @@ import {
   Home,
   Info,
   KeyRound,
+  Mail,
   Map,
   Menu,
   Radar,
@@ -101,7 +103,7 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   const location = useLocation()
 
   return (
-    <nav className="flex flex-col gap-0.5">
+    <nav className="flex flex-1 flex-col justify-between">
       {NAV_SECTIONS.map((section) => {
         const isSectionActive = section.links.some((l) => l.to === location.pathname)
         const isSingle = section.links.length === 1
@@ -111,7 +113,7 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
               to={section.links[0].to}
               end={section.links[0].to === '/'}
               onClick={isSingle ? onNavigate : undefined}
-              className={`focus-ring group relative flex items-center gap-3 border-l-2 py-1.5 pr-3 pl-3 font-sans text-sm font-medium transition-colors ${
+              className={`focus-ring group relative flex items-center gap-3 border-l-2 py-1 pr-3 pl-3 font-sans text-sm font-medium transition-colors ${
                 isSectionActive ? 'border-gold bg-surface text-gold-warm' : 'border-transparent text-ink-muted hover:bg-surface/60 hover:text-ink'
               }`}
             >
@@ -225,10 +227,22 @@ function AlsoBuilt() {
       href="https://iabhi92.github.io/Crypto-Project/"
       target="_blank"
       rel="noreferrer"
-      className="focus-ring flex items-center gap-2 rounded-sm px-3 py-1 font-mono text-xs text-ink-muted transition-colors hover:text-gold"
+      className="focus-ring flex items-center gap-2 rounded-sm px-3 py-0.5 font-mono text-xs text-ink-muted transition-colors hover:text-gold"
     >
       <ExternalLink className="h-3.5 w-3.5 shrink-0" />
       <span>Also built: distributed threshold signatures</span>
+    </a>
+  )
+}
+
+function ContactLink() {
+  return (
+    <a
+      href="mailto:pinku2c@gmail.com"
+      className="focus-ring flex items-center gap-2 rounded-sm px-3 py-0.5 font-mono text-xs text-ink-muted transition-colors hover:text-gold"
+    >
+      <Mail className="h-3.5 w-3.5 shrink-0" />
+      <span>Questions or bugs: pinku2c@gmail.com</span>
     </a>
   )
 }
@@ -237,19 +251,20 @@ function AlsoBuilt() {
  * footer add up to more content than most laptop viewports have vertical room for -- rather
  * than let any part of the sidebar scroll (easy to never notice there's more below the fold),
  * everything here is sized to actually fit: the decorative building illustration and quote were
- * cut, nav item padding was tightened, and what's left (logo, nav, live status, also-built) is a
- * fixed, non-scrolling stack. If the nav grows further this will need revisiting, but for the
- * current 18 links it fits down to ~640px of viewport height. */
+ * cut, nav item padding was tightened, and what's left (logo, nav, live status, also-built,
+ * contact) is a fixed, non-scrolling stack. If the nav grows further this will need
+ * revisiting, but for the current 18 links it fits down to ~640px of viewport height. */
 function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   return (
-    <div className="flex h-full flex-col gap-3">
+    <div className="flex h-full flex-col gap-2">
       <NavLink to="/" onClick={onNavigate} className="focus-ring shrink-0 rounded-sm">
         <Logo />
       </NavLink>
       <NavLinks onNavigate={onNavigate} />
-      <div className="mt-auto flex shrink-0 flex-col gap-1.5 border-t border-line pt-2.5">
+      <div className="mt-auto flex shrink-0 flex-col gap-1 border-t border-line pt-2">
         <LiveStatus />
         <AlsoBuilt />
+        <ContactLink />
       </div>
     </div>
   )
@@ -285,6 +300,21 @@ export default function Layout() {
 
   useEffect(() => {
     setNavOpen(false)
+  }, [location.pathname])
+
+  // This is a client-rendered SPA behind one static index.html, so without this every route
+  // shipped the exact same <title>/description to search engines and link previews -- a
+  // search result for the QFT page and one for the IBM hardware page were indistinguishable
+  // apart from the URL. Static index.html still carries the site-wide fallback (for the
+  // instant before this runs, and for any path not in PAGE_META).
+  useEffect(() => {
+    const meta = PAGE_META[location.pathname] ?? DEFAULT_PAGE_META
+    document.title = meta.title
+    document.querySelector('meta[name="description"]')?.setAttribute('content', meta.description)
+    document.querySelector('meta[property="og:title"]')?.setAttribute('content', meta.title)
+    document.querySelector('meta[property="og:description"]')?.setAttribute('content', meta.description)
+    document.querySelector('meta[property="og:url"]')?.setAttribute('content', `https://crackrsa.com${location.pathname}`)
+    document.querySelector('link[rel="canonical"]')?.setAttribute('href', `https://crackrsa.com${location.pathname}`)
   }, [location.pathname])
 
   useEffect(() => {
@@ -341,7 +371,7 @@ export default function Layout() {
       <CommandPalette items={COMMAND_ITEMS} open={paletteOpen} onClose={() => setPaletteOpen(false)} />
 
       {/* persistent desktop sidebar */}
-      <aside className="fixed inset-y-0 left-0 z-20 hidden w-72 flex-col overflow-y-auto border-r border-line bg-navy px-5 py-4 lg:flex">
+      <aside className="fixed inset-y-0 left-0 z-20 hidden w-72 flex-col overflow-y-auto border-r border-line bg-navy px-5 py-3 lg:flex">
         <SidebarContent />
       </aside>
 
@@ -354,7 +384,7 @@ export default function Layout() {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -16 }}
             transition={{ duration: DURATION.micro }}
-            className="fixed inset-y-0 left-0 z-40 flex w-72 flex-col overflow-y-auto border-r border-line bg-navy px-5 py-4 shadow-2xl lg:hidden"
+            className="fixed inset-y-0 left-0 z-40 flex w-72 flex-col overflow-y-auto border-r border-line bg-navy px-5 py-3 shadow-2xl lg:hidden"
           >
             <SidebarContent onNavigate={() => setNavOpen(false)} />
           </motion.div>

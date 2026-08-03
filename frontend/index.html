@@ -9,6 +9,43 @@
       content="From-scratch RSA, classical factoring attacks, a real quantum simulator, and a live IBM quantum hardware run -- an interactive demonstration of why quantum computing breaks RSA."
     />
     <meta name="theme-color" content="#070A0F" />
+    <link rel="canonical" href="https://crackrsa.com/" />
+    <!--
+      Layout.tsx's usePageMeta-equivalent effect overwrites title/og:*/canonical on every route
+      change (this is a client-rendered SPA with one static index.html) -- these are the
+      site-wide defaults search engines and link unfurlers see before that JS runs, and the
+      fallback for any path it doesn't recognize.
+    -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Shor's Lab" />
+    <meta property="og:title" content="Shor's Algorithm vs. RSA" />
+    <meta
+      property="og:description"
+      content="From-scratch RSA, classical factoring attacks, a real quantum simulator, and a live IBM quantum hardware run -- an interactive demonstration of why quantum computing breaks RSA."
+    />
+    <meta property="og:url" content="https://crackrsa.com/" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="Shor's Algorithm vs. RSA" />
+    <meta
+      name="twitter:description"
+      content="From-scratch RSA, classical factoring attacks, a real quantum simulator, and a live IBM quantum hardware run -- an interactive demonstration of why quantum computing breaks RSA."
+    />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "Shor's Lab",
+        "alternateName": "Shor's Algorithm vs. RSA",
+        "url": "https://crackrsa.com/",
+        "description": "An interactive, from-scratch demonstration of RSA encryption, classical factoring attacks, quantum period-finding via Shor's algorithm, and a real IBM quantum hardware run.",
+        "about": [
+          { "@type": "Thing", "name": "RSA encryption" },
+          { "@type": "Thing", "name": "Shor's algorithm" },
+          { "@type": "Thing", "name": "Quantum computing" },
+          { "@type": "Thing", "name": "Cryptography" }
+        ]
+      }
+    </script>
     <!--
       The backend's own security_headers.py locks its JSON API down to default-src 'none' --
       the pages a person actually browses had no equivalent. A meta-tag CSP can't set every
