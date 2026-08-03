@@ -370,11 +370,6 @@ export default function Layout() {
 
       <CommandPalette items={COMMAND_ITEMS} open={paletteOpen} onClose={() => setPaletteOpen(false)} />
 
-      {/* persistent desktop sidebar */}
-      <aside className="fixed inset-y-0 left-0 z-20 hidden w-72 flex-col overflow-y-auto border-r border-line bg-navy px-5 py-3 lg:flex">
-        <SidebarContent />
-      </aside>
-
       {/* mobile drawer -- same content, toggled */}
       <AnimatePresence>
         {navOpen && (
@@ -403,14 +398,28 @@ export default function Layout() {
         )}
       </AnimatePresence>
 
-      <div className="lg:pl-72">
-        <div className="hidden items-center justify-end gap-2 border-b border-line bg-navy px-4 py-3 sm:px-8 lg:flex">
-          <SfxToggle />
-          <CommandPaletteTrigger onOpen={() => setPaletteOpen(true)} />
+      {/* The desktop sidebar used to be `fixed inset-y-0`, which ignores the banner above it
+          entirely and starts at the very top of the viewport -- at scroll position 0 that put
+          the banner (also positioned independently) visually on top of the logo, an overlap a
+          screenshot caught directly. Sticky, as a real flex sibling of the main content instead
+          of an out-of-flow fixed element, starts in its natural document position (below the
+          banner, no overlap possible) and only pins to the viewport top once the page has
+          scrolled that banner out of view -- no hardcoded offset needed even though the banner's
+          own height changes when its text wraps to two lines at some widths. */}
+      <div className="lg:flex">
+        <aside className="hidden w-72 shrink-0 flex-col overflow-y-auto border-r border-line bg-navy px-5 py-3 lg:sticky lg:top-0 lg:z-20 lg:flex lg:h-screen">
+          <SidebarContent />
+        </aside>
+
+        <div className="min-w-0 flex-1">
+          <div className="hidden items-center justify-end gap-2 border-b border-line bg-navy px-4 py-3 sm:px-8 lg:flex">
+            <SfxToggle />
+            <CommandPaletteTrigger onOpen={() => setPaletteOpen(true)} />
+          </div>
+          <main className="relative z-10 mx-auto min-w-0 max-w-6xl px-4 py-8 sm:px-8">
+            <AnimatedOutlet />
+          </main>
         </div>
-        <main className="relative z-10 mx-auto min-w-0 max-w-6xl px-4 py-8 sm:px-8">
-          <AnimatedOutlet />
-        </main>
       </div>
     </div>
   )
