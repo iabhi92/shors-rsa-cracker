@@ -33,6 +33,21 @@ jobs:
         working-directory: frontend
         run: npm ci
 
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-${{ hashFiles('frontend/package-lock.json') }}
+
+      - name: Install Playwright chromium
+        working-directory: frontend
+        # Only for the prerender step below (a real headless browser, not a jsdom stand-in --
+        # see scripts/prerender.mjs for why). --with-deps is skipped when the cache already has
+        # the browser binary; the OS-level shared libraries it installs alongside are already
+        # present on every run of the same runner image regardless of cache state.
+        run: npx playwright install chromium ${{ steps.playwright-cache.outputs.cache-hit != 'true' && '--with-deps' || '' }}
+
       - name: Build
         working-directory: frontend
         # VITE_API_BASE_URL points the static site at the live Render backend (see
@@ -45,10 +60,24 @@ jobs:
           VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL || 'https://shors-rsa-cracker.onrender.com/api' }}
         run: npm run build
 
+      - name: Prerender static routes
+        working-directory: frontend
+        # GitHub Pages has no server-side rewrites or custom status codes -- without this, every
+        # route except / only exists via the 404.html SPA-fallback trick below, which real
+        # browsers happily ignore (they already have the HTML+JS and route client-side) but
+        # which Google's URL Inspection tool takes at face value: it reported /guide as
+        # "Page cannot be indexed: Not found (404)" even though the page works fine for a human.
+        # This visits every route in the sitemap with a real headless browser post-build and
+        # saves the rendered result as a real file, so GitHub Pages serves it with a normal 200
+        # instead of falling back. See scripts/prerender.mjs for the full explanation.
+        run: node scripts/prerender.mjs
+
       - name: SPA fallback for client-side routing
-        # GitHub Pages has no server-side rewrite rules, so a deep link (e.g. /rsa-lab)
-        # 404s on refresh unless there's a 404.html to fall back to -- copying index.html
-        # to 404.html lets it load and hand off to React Router client-side.
+        # Covers what prerender.mjs doesn't -- dynamic routes like /docs/:slug, which aren't in
+        # sitemap.xml since their slugs come from the backend at runtime, not from a fixed list
+        # this build step could know about. Deep-linking one still needs 404.html's fallback to
+        # load the app shell and hand off to React Router client-side (see the prerender step
+        # above for why that fallback alone isn't enough for the routes it *does* cover).
         run: cp frontend/dist/index.html frontend/dist/404.html
 
       - uses: actions/configure-pages@v5
