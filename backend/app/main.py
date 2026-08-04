@@ -30,6 +30,7 @@ from backend.app.routers import (
     security_demo,
     shor,
     simulators,
+    status,
 )
 from backend.app.security_headers import security_headers_middleware
 
@@ -83,6 +84,7 @@ app.include_router(resource.router, prefix="/api/resource-estimate", tags=["reso
 app.include_router(ibm.router, prefix="/api/ibm-hardware", tags=["ibm-hardware"])
 app.include_router(ibm_live.router, prefix="/api/ibm-hardware/live", tags=["ibm-hardware-live"])
 app.include_router(docs.router, prefix="/api/docs", tags=["docs"])
+app.include_router(status.router, prefix="/api/status", tags=["status"])
 
 
 @app.get("/api/health")

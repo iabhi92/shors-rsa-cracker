@@ -13,7 +13,9 @@ services:
       - key: CORS_ALLOW_ORIGINS
         # The frontend moved to a custom domain (see frontend/public/CNAME); the old
         # iabhi92.github.io URL is kept here too since GitHub Pages 301-redirects it rather
-        # than retiring it, so a cached/bookmarked link there still needs to work.
-        value: https://iabhi92.github.io,https://crackrsa.com,https://www.crackrsa.com
+        # than retiring it, so a cached/bookmarked link there still needs to work. iabhi92.online
+        # is the portfolio site's own custom domain -- it calls /api/status cross-origin for its
+        # live status widget.
+        value: https://iabhi92.github.io,https://crackrsa.com,https://www.crackrsa.com,https://iabhi92.online
       - key: PYTHON_VERSION
         value: 3.12.13
