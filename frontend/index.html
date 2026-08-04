@@ -64,7 +64,7 @@
     -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data:; connect-src 'self' https://shors-rsa-cracker.onrender.com; object-src 'none'; base-uri 'self'; form-action 'self'"
+      content="default-src 'self'; script-src 'self' https://www.googletagmanager.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data:; connect-src 'self' https://shors-rsa-cracker.onrender.com https://www.googletagmanager.com https://*.google-analytics.com; object-src 'none'; base-uri 'self'; form-action 'self'"
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -73,6 +73,14 @@
       rel="stylesheet"
     />
     <title>Shor's Algorithm vs. RSA</title>
+    <!--
+      GA4 (property: crackrsa.com, G-DPZ23H5GHQ). The init snippet is a same-origin file rather
+      than an inline <script> because the CSP above has no 'unsafe-inline' for script-src -- an
+      inline gtag() call would be silently blocked exactly like the connect-src note above
+      describes. googletagmanager.com/gtag.js is the one CSP-listed external script origin.
+    -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-DPZ23H5GHQ"></script>
+    <script src="/analytics.js"></script>
   </head>
   <body>
     <div id="root"></div>
