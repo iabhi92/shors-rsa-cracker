@@ -175,7 +175,7 @@ function Logo() {
       </span>
       <span className="leading-tight">
         <span className="block font-display text-sm font-semibold tracking-[0.08em] text-ink uppercase">Shor's Lab</span>
-        <span className="block font-mono text-[0.6rem] tracking-[0.1em] text-ink-muted uppercase">Quantum security research</span>
+        <span className="block font-mono text-[0.6rem] tracking-[0.1em] text-ink-muted uppercase">crackrsa.com</span>
       </span>
     </span>
   )

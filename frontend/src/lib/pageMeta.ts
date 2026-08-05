@@ -17,9 +17,9 @@ type PageMeta = { title: string; description: string }
 
 export const PAGE_META: Record<string, PageMeta> = {
   '/': {
-    title: `${SITE_TAGLINE} — Quantum Computing Breaks RSA, From Scratch`,
+    title: `crackrsa.com — ${SITE_TAGLINE}, Quantum Computing Breaks RSA From Scratch`,
     description:
-      "A hands-on demonstration of how Shor's algorithm breaks RSA encryption: from-scratch RSA, classical factoring attacks, a real quantum statevector simulator, and a live run on actual IBM quantum hardware.",
+      "crackrsa.com: a hands-on demonstration of how Shor's algorithm breaks RSA encryption: from-scratch RSA, classical factoring attacks, a real quantum statevector simulator, and a live run on actual IBM quantum hardware.",
   },
   '/quantum-fundamentals': {
     title: `Quantum Fundamentals — Qubits, Superposition & Entanglement | ${SITE_NAME}`,
