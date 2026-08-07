@@ -53,6 +53,7 @@ const MODULES = [
     cta: 'Run It Live',
     sketch: <HardwareSketch />,
     accent: '#e3b45e',
+    badge: 'Live',
   },
   {
     to: '/malleability-lab',
@@ -62,6 +63,7 @@ const MODULES = [
     cta: 'Break It',
     sketch: <MalleabilitySketch />,
     accent: '#e05a4e',
+    badge: '6 attacks',
   },
   {
     to: '/attack-surface',
@@ -71,6 +73,7 @@ const MODULES = [
     cta: 'See Every Attack',
     sketch: <AttackSurfaceSketch />,
     accent: '#e05a4e',
+    badge: `${ATTACKS.length} vectors`,
   },
 ]
 

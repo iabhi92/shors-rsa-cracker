@@ -13,7 +13,7 @@ export interface AttackEntry {
 }
 
 export const CATEGORY_STYLES: Record<Category, string> = {
-  'Key recovery': 'text-red-300',
+  'Key recovery': 'text-attack',
   'Message recovery': 'text-gold-warm',
   'Message manipulation': 'text-violet',
   'Side-channel': 'text-harbour',
@@ -24,6 +24,16 @@ export const CATEGORY_ICON: Record<Category, typeof KeyRound> = {
   'Message recovery': MessageSquareWarning,
   'Message manipulation': ShieldAlert,
   'Side-channel': Radio,
+}
+
+// CSS var() references (not raw hex) -- SVG stroke/fill and inline box-shadow can't read
+// Tailwind's text-* classes, so the Attack Surface Map's topology graph reads the exact same
+// tokens from index.css's @theme block instead of hardcoding a second copy of these colors.
+export const CATEGORY_VAR: Record<Category, string> = {
+  'Key recovery': 'var(--color-attack)',
+  'Message recovery': 'var(--color-gold-warm)',
+  'Message manipulation': 'var(--color-violet)',
+  'Side-channel': 'var(--color-harbour)',
 }
 
 // Every row here is a real, live demo elsewhere on this site -- AttackSurfacePage.tsx is a map

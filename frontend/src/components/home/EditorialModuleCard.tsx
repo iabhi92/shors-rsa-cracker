@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
 import { Link } from 'react-router'
 import { ArrowRight } from 'lucide-react'
 
@@ -135,6 +135,7 @@ export function EditorialModuleCard({
   cta,
   sketch,
   accent = '#c99545',
+  badge,
 }: {
   to: string
   number: string
@@ -147,11 +148,16 @@ export function EditorialModuleCard({
    * subject, so "Start here" reads as four distinct doors rather than one card repeated four
    * times with different words in it. */
   accent?: string
+  /** A small high-contrast label in the module's own accent, e.g. "LIVE" or "6 ATTACKS" --
+   * grounded in something real about that module (a live hardware call, an actual attack
+   * count), never decorative filler. */
+  badge?: string
 }) {
   return (
     <Link
       to={to}
-      className="group relative flex h-full flex-col overflow-hidden rounded-sm border border-line bg-surface transition-all duration-200 hover:-translate-y-1"
+      style={{ '--card-accent': accent } as CSSProperties}
+      className="group relative flex h-full flex-col overflow-hidden rounded-sm border border-line bg-surface transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_0_24px_-8px_var(--card-accent)]"
     >
       {/* an accent-colored ring that fades in on hover, layered over the neutral base border --
           avoids reaching for JS mouse handlers just to swap one CSS color on :hover. */}
@@ -160,6 +166,15 @@ export function EditorialModuleCard({
         style={{ borderColor: accent }}
         aria-hidden
       />
+
+      {badge && (
+        <span
+          className="absolute top-3 right-3 z-10 rounded-full border px-2 py-0.5 font-mono text-[0.6rem] font-medium tracking-wide uppercase"
+          style={{ borderColor: accent, color: accent }}
+        >
+          {badge}
+        </span>
+      )}
 
       <div className="h-0.75 w-full shrink-0" style={{ backgroundColor: accent }} aria-hidden />
 

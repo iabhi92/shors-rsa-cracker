@@ -36,10 +36,13 @@ export function Card({
   ...props
 }: HTMLAttributes<HTMLDivElement> & { interactive?: boolean; accent?: 'gold' | 'violet'; title?: string }) {
   const hoverBorder = accent === 'violet' ? 'hover:border-violet/50' : 'hover:border-gold/50'
+  // A soft outer glow on hover, in the card's own accent -- the "lit lab equipment" elevation
+  // cue from the design brief (accents get a 2-4px glow instead of a heavier shadow).
+  const hoverGlow = accent === 'violet' ? 'hover:shadow-[0_0_20px_-6px_var(--color-violet)]' : 'hover:shadow-[0_0_20px_-6px_var(--color-gold)]'
   return (
     <div
-      className={`group relative rounded-sm border border-line bg-surface transition-colors duration-150 ${
-        interactive ? hoverBorder : ''
+      className={`group relative rounded-sm border border-line bg-surface transition-[color,background-color,border-color,box-shadow] duration-150 ${
+        interactive ? `${hoverBorder} ${hoverGlow}` : ''
       } ${className}`}
       {...props}
     >
